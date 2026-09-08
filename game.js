@@ -868,7 +868,6 @@ function createDeadCow(x, y) {
 
 function gameOver() {
     gameState = 'gameover';
-    this.physics.pause();
     if (score > highScore) { highScore = score; localStorage.setItem('cowboyHighScore', highScore); }
     removeBossDarkness.call(this);
     
@@ -882,21 +881,12 @@ function gameOver() {
     goUI.add(this.add.text(0, -40, '✨ Золотых: ' + goldenCowsCollected, { fontSize: '24px', fill: '#FFD700' }).setOrigin(0.5));
     goUI.add(this.add.text(0, 10, 'Всего за все игры: ' + totalCowsEverSaved + ' 🐄 | ' + totalGoldenCowsEver + ' ✨', { fontSize: '20px', fill: '#88ff88' }).setOrigin(0.5));
     
-    // Кнопка ИГРАТЬ
-    let playBtn = this.add.rectangle(0, 120, 250, 70, 0x228B22, 0.9);
-    playBtn.setStrokeStyle(4, 0x00FF00);
-    goUI.add(playBtn);
-    goUI.add(this.add.text(0, 120, '▶ ИГРАТЬ', { fontSize: '32px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5));
-    
-    playBtn.setInteractive({ useHandCursor: true });
-    playBtn.on('pointerover', () => playBtn.setFillStyle(0x32CD32));
-    playBtn.on('pointerout', () => playBtn.setFillStyle(0x228B22));
-    playBtn.on('pointerdown', () => {
-        // Полностью сбрасываем состояние и перезапускаем сцену
-        this.input.enabled = false;
-        this.time.delayedCall(100, () => {
-            this.scene.stop();
-            this.scene.start();
-        });
-    });
+    // HTML КНОПКА ПОВЕРХ CANVAS — не зависит от Phaser!
+    let btn = document.createElement('button');
+    btn.textContent = '▶ ИГРАТЬ';
+    btn.style.cssText = 'position:absolute;left:50%;top:68%;transform:translate(-50%,-50%);padding:15px 50px;font-size:28px;font-weight:bold;color:white;background:#228B22;border:4px solid #00FF00;border-radius:10px;cursor:pointer;z-index:9999;font-family:Arial;';
+    btn.onmouseover = () => btn.style.background = '#32CD32';
+    btn.onmouseout = () => btn.style.background = '#228B22';
+    btn.onclick = () => { window.location.reload(); };
+    document.body.appendChild(btn);
 }
