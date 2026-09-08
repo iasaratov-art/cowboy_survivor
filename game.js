@@ -882,16 +882,21 @@ function gameOver() {
     goUI.add(this.add.text(0, -40, '✨ Золотых: ' + goldenCowsCollected, { fontSize: '24px', fill: '#FFD700' }).setOrigin(0.5));
     goUI.add(this.add.text(0, 10, 'Всего за все игры: ' + totalCowsEverSaved + ' 🐄 | ' + totalGoldenCowsEver + ' ✨', { fontSize: '20px', fill: '#88ff88' }).setOrigin(0.5));
     
-    let playBtn = this.add.rectangle(0, 120, 250, 60, 0x228B22, 0.9);
+    // Кнопка ИГРАТЬ
+    let playBtn = this.add.rectangle(0, 120, 250, 70, 0x228B22, 0.9);
     playBtn.setStrokeStyle(4, 0x00FF00);
     goUI.add(playBtn);
-    goUI.add(this.add.text(0, 120, '🏠 В МЕНЮ', { fontSize: '28px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5));
-    playBtn.setInteractive();
+    goUI.add(this.add.text(0, 120, '▶ ИГРАТЬ', { fontSize: '32px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5));
+    
+    playBtn.setInteractive({ useHandCursor: true });
     playBtn.on('pointerover', () => playBtn.setFillStyle(0x32CD32));
     playBtn.on('pointerout', () => playBtn.setFillStyle(0x228B22));
     playBtn.on('pointerdown', () => {
-        goUI.destroy();
-        if (gameUI) { gameUI.destroy(); gameUI = null; }
-        this.scene.restart();
+        // Полностью сбрасываем состояние и перезапускаем сцену
+        this.input.enabled = false;
+        this.time.delayedCall(100, () => {
+            this.scene.stop();
+            this.scene.start();
+        });
     });
 }
