@@ -10,7 +10,7 @@ let totalCowsEverSaved = parseInt(localStorage.getItem('totalCowsEverSaved')) ||
 let totalGoldenCowsEver = parseInt(localStorage.getItem('totalGoldenCowsEver')) || 0;
 
 let horse, cowboy, gun;
-let enemies, bullets, bgDecorations, powerUps;
+let enemies, bullets, bgDecorations, powerUps, wolfSkeletons;
 let cows = [], cowsToCollect, goldenCows;
 let deadCows = [], eatingWolves = [];
 let dogCompanion = null;
@@ -25,11 +25,50 @@ let menuUI = null, gameUI = null, bossDarkOverlay = null;
 let wolfSpawnRate = 800, powerUpSpawnRate = 25000;
 let lastDifficultyIncrease = 0, lastPowerUpSpawn = 0;
 
+let achievements = {
+    firstBlood: false, shepherd: false, godOfWar: false,
+    survivor: false, goldenFever: false, hunter: false, legend: false,
+    bullfighter: false
+};
+let wolvesKilled = 0;
+let bullsKilled = 0;
+
+const MAP_SIZE = 6000;
+const MAP_HALF = MAP_SIZE / 2;
+const MAP_LIMIT = MAP_HALF - 200;
+
+let bulls = [];
+let bloodStains = [];
+let dustParticles = [];
+let lastDustTime = 0;
+
 function preload() {}
 
 function create() {
-    this.add.rectangle(0, 0, 20000, 20000, 0x7EC850).setOrigin(0.5);
+    this.physics.world.setBounds(-MAP_HALF, -MAP_HALF, MAP_SIZE, MAP_SIZE);
+    this.add.rectangle(0, 0, MAP_SIZE, MAP_SIZE, 0x7EC850);
+    createForestBorders.call(this);
     showMainMenu.call(this);
+}
+
+function createForestBorders() {
+    let g = this.add.graphics();
+    let colors = [0x2D5016, 0x1A3D0F, 0x3A6B1E];
+    for (let i = 0; i < 400; i++) {
+        let side = Phaser.Math.Between(0, 3);
+        let x, y;
+        if (side === 0) { x = Phaser.Math.Between(-MAP_HALF, MAP_HALF); y = Phaser.Math.Between(-MAP_HALF, -MAP_HALF + 400); }
+        else if (side === 1) { x = Phaser.Math.Between(-MAP_HALF, MAP_HALF); y = Phaser.Math.Between(MAP_HALF - 400, MAP_HALF); }
+        else if (side === 2) { x = Phaser.Math.Between(-MAP_HALF, -MAP_HALF + 400); y = Phaser.Math.Between(-MAP_HALF, MAP_HALF); }
+        else { x = Phaser.Math.Between(MAP_HALF - 400, MAP_HALF); y = Phaser.Math.Between(-MAP_HALF, MAP_HALF); }
+        g.fillStyle(colors[Phaser.Math.Between(0, 2)], 0.8);
+        g.fillCircle(x, y, Phaser.Math.Between(30, 70));
+    }
+    g.fillStyle(0x2D5016, 0.5);
+    g.fillRect(-MAP_HALF, -MAP_HALF, MAP_SIZE, 200);
+    g.fillRect(-MAP_HALF, MAP_HALF - 200, MAP_SIZE, 200);
+    g.fillRect(-MAP_HALF, -MAP_HALF, 200, MAP_SIZE);
+    g.fillRect(MAP_HALF - 200, -MAP_HALF, 200, MAP_SIZE);
 }
 
 function showMainMenu() {
@@ -96,26 +135,34 @@ function updateCowboyWeapon() {
     toRemove.forEach(c => c.destroy());
     
     let wt = activePowerUp.type;
-    if (wt === 'shotgun') {
-        gun = this.add.rectangle(18, 0, 24, 6, 0x8B0000);
-        cowboy.add(this.add.rectangle(30, 0, 8, 4, 0x444444));
-    } else if (wt === 'machinegun') {
-        gun = this.add.rectangle(18, 0, 22, 5, 0x000088);
-        cowboy.add(this.add.rectangle(15, 5, 4, 8, 0x0000AA));
-    } else if (wt === 'minigun') {
-        gun = this.add.rectangle(20, 0, 28, 8, 0x654321);
-        cowboy.add(this.add.rectangle(34, -2, 10, 3, 0x8B4513));
-        cowboy.add(this.add.rectangle(34, 2, 10, 3, 0x8B4513));
-    } else if (wt === 'multishot') {
-        gun = this.add.rectangle(16, 0, 20, 10, 0xFF6600);
-        cowboy.add(this.add.rectangle(26, 0, 6, 12, 0xFF8800));
-    } else {
-        gun = this.add.rectangle(14, 0, 16, 5, 0x222222);
-    }
+    if (wt === 'shotgun') { gun = this.add.rectangle(18, 0, 24, 6, 0x8B0000); cowboy.add(this.add.rectangle(30, 0, 8, 4, 0x444444)); }
+    else if (wt === 'machinegun') { gun = this.add.rectangle(18, 0, 22, 5, 0x000088); cowboy.add(this.add.rectangle(15, 5, 4, 8, 0x0000AA)); }
+    else if (wt === 'minigun') { gun = this.add.rectangle(20, 0, 28, 8, 0x654321); cowboy.add(this.add.rectangle(34, -2, 10, 3, 0x8B4513)); cowboy.add(this.add.rectangle(34, 2, 10, 3, 0x8B4513)); }
+    else if (wt === 'multishot') { gun = this.add.rectangle(16, 0, 20, 10, 0xFF6600); cowboy.add(this.add.rectangle(26, 0, 6, 12, 0xFF8800)); }
+    else { gun = this.add.rectangle(14, 0, 16, 5, 0x222222); }
     cowboy.add(gun);
 }
 
+function clampToMap(obj) {
+    if (obj.x < -MAP_LIMIT) obj.x = -MAP_LIMIT;
+    if (obj.x > MAP_LIMIT) obj.x = MAP_LIMIT;
+    if (obj.y < -MAP_LIMIT) obj.y = -MAP_LIMIT;
+    if (obj.y > MAP_LIMIT) obj.y = MAP_LIMIT;
+}
+
+function randomMapPos(distMin, distMax) {
+    let a = Math.random() * Math.PI * 2;
+    let d = Phaser.Math.Between(distMin, distMax);
+    let x = horse.x + Math.cos(a) * d;
+    let y = horse.y + Math.sin(a) * d;
+    x = Phaser.Math.Clamp(x, -MAP_LIMIT, MAP_LIMIT);
+    y = Phaser.Math.Clamp(y, -MAP_LIMIT, MAP_LIMIT);
+    return { x, y };
+}
+
 function startGame() {
+    document.querySelectorAll('button').forEach(b => b.remove());
+    
     gameState = 'playing';
     if (menuUI) { menuUI.destroy(); menuUI = null; }
     
@@ -128,10 +175,19 @@ function startGame() {
     wolfSpawnRate = 800; powerUpSpawnRate = 25000;
     lastDifficultyIncrease = 0; lastPowerUpSpawn = 0;
     horseHP = 3;
+    wolvesKilled = 0; bullsKilled = 0;
+    bulls = []; bloodStains = []; dustParticles = [];
+    lastDustTime = 0;
+    
+    achievements = {
+        firstBlood: false, shepherd: false, godOfWar: false,
+        survivor: false, goldenFever: false, hunter: false, legend: false,
+        bullfighter: false
+    };
     
     horse = createHorse.call(this);
     this.physics.add.existing(horse);
-    horse.body.setCollideWorldBounds(false);
+    horse.body.setCollideWorldBounds(true);
     horse.body.setSize(28, 40);
     horse.body.setAllowGravity(false);
 
@@ -141,6 +197,7 @@ function startGame() {
     enemies = this.physics.add.group();
     bullets = this.physics.add.group();
     bgDecorations = this.add.group();
+    wolfSkeletons = this.add.group();
     cowsToCollect = this.physics.add.group();
     goldenCows = this.physics.add.group();
     powerUps = this.physics.add.group();
@@ -165,6 +222,7 @@ function startGame() {
     this.time.addEvent({ delay: 2500, callback: spawnGrassPatch, callbackScope: this, loop: true });
     this.time.addEvent({ delay: 3000, callback: spawnCow, callbackScope: this, loop: true });
     this.time.addEvent({ delay: 45000, callback: spawnGoldenCow, callbackScope: this, loop: true });
+    this.time.addEvent({ delay: 30000, callback: spawnBull, callbackScope: this, loop: true });
 
     gameUI = this.add.container(0, 0);
     gameUI.setScrollFactor(0);
@@ -183,14 +241,153 @@ function startGame() {
     powerUpText = this.add.text(600, 50, '', { fontSize: '32px', fill: '#00ffff', fontStyle: 'bold' }).setOrigin(0.5);
     gameUI.add(powerUpText);
 
+    this.bossHPBar = this.add.graphics();
+    this.bossHPBar.setScrollFactor(0);
+    this.bossHPBar.setDepth(1000);
+    gameUI.add(this.bossHPBar);
+    this.bossHPText = this.add.text(600, 20, '', { fontSize: '18px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+    gameUI.add(this.bossHPText);
+
     createSkillButtons.call(this);
     this.cameras.main.startFollow(horse, true, 0.1, 0.1);
+    this.cameras.main.setBounds(-MAP_HALF, -MAP_HALF, MAP_SIZE, MAP_SIZE);
+}
+
+function spawnBull() {
+    if (gameState !== 'playing') return;
+    let pos = randomMapPos(500, 900);
+    let bull = createBull.call(this, pos.x, pos.y);
+    bulls.push(bull);
+}
+
+function createBull(x, y) {
+    let body = this.add.ellipse(0, 0, 35, 45, 0x4A2511);
+    let head = this.add.ellipse(0, -25, 22, 20, 0x5C2E0E);
+    let hornL = this.add.triangle(-10, -32, 0, 0, -8, -15, -2, -8, 0xDDDDAA);
+    let hornR = this.add.triangle(10, -32, 0, 0, 8, -15, 2, -8, 0xDDDDAA);
+    let noseL = this.add.circle(-4, -20, 2, 0x000000);
+    let noseR = this.add.circle(4, -20, 2, 0x000000);
+    let eyeL = this.add.circle(-6, -28, 2, 0x000000);
+    let eyeR = this.add.circle(6, -28, 2, 0x000000);
+    let tail = this.add.rectangle(0, 25, 4, 12, 0x3A1D0A);
+    
+    let container = this.add.container(x, y, [body, head, hornL, hornR, noseL, noseR, eyeL, eyeR, tail]);
+    container.hp = 5;
+    container.angry = false;
+    container.attackTimer = 0;
+    container.angle = 0;
+    container.wanderTarget = null;
+    return container;
+}
+
+function killBull(bull, byBoss = false) {
+    let bx = bull.x, by = bull.y, angle = bull.angle;
+    let idx = bulls.indexOf(bull);
+    if (idx >= 0) bulls.splice(idx, 1);
+    
+    let skeleton = this.add.graphics();
+    skeleton.lineStyle(3, 0xDDDDDD, 0.8);
+    skeleton.strokeCircle(0, -30, 12);
+    skeleton.lineBetween(-8, -38, -15, -50);
+    skeleton.lineBetween(8, -38, 15, -50);
+    skeleton.strokeCircle(-4, -32, 2);
+    skeleton.strokeCircle(4, -32, 2);
+    skeleton.lineBetween(0, -18, 0, 20);
+    for (let i = 0; i < 4; i++) skeleton.strokeEllipse(-8, -10 + i * 8, 16, 6);
+    skeleton.strokeEllipse(0, 25, 14, 8);
+    skeleton.lineBetween(-7, 30, -10, 50);
+    skeleton.lineBetween(7, 30, 10, 50);
+    
+    let skelContainer = this.add.container(bx, by, [skeleton]);
+    skelContainer.angle = angle;
+    skelContainer.alpha = 0.6;
+    wolfSkeletons.add(skelContainer);
+    this.tweens.add({ targets: skelContainer, alpha: 0, duration: 8000, onComplete: () => skelContainer.destroy() });
+    
+    bull.destroy();
+    bullsKilled++;
+    score += 50;
+    
+    if (bullsKilled >= 3 && !achievements.bullfighter) {
+        achievements.bullfighter = true;
+        showAchievement.call(this, '🐂 ТОРЕАДОР!');
+    }
+    
+    let flash = this.add.circle(bx, by, 20, 0xFF8800, 0.8);
+    this.tweens.add({ targets: flash, alpha: 0, scale: 3, duration: 400, onComplete: () => flash.destroy() });
+    let txt = this.add.text(bx, by - 30, '+50 ', { fontSize: '24px', fill: '#FFD700', fontStyle: 'bold' }).setOrigin(0.5);
+    this.tweens.add({ targets: txt, y: by - 80, alpha: 0, duration: 1000, onComplete: () => txt.destroy() });
+}
+
+function hitBull(bull) {
+    bull.hp--;
+    bull.angry = true;
+    
+    let flash = this.add.circle(bull.x, bull.y, 15, 0xFF4400, 0.8);
+    this.tweens.add({ targets: flash, alpha: 0, scale: 2, duration: 300, onComplete: () => flash.destroy() });
+    
+    let hpText = this.add.text(bull.x, bull.y - 30, bull.hp + '/5', { fontSize: '20px', fill: '#FF4400', fontStyle: 'bold' }).setOrigin(0.5);
+    this.tweens.add({ targets: hpText, y: bull.y - 60, alpha: 0, duration: 800, onComplete: () => hpText.destroy() });
+    
+    if (bull.hp <= 0) {
+        killBull.call(this, bull);
+    } else if (bull.hp === 4) {
+        let warnText = this.add.text(bull.x, bull.y - 50, '🐂 БЫК РАЗОЗЛЁН!', { fontSize: '24px', fill: '#FF0000', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5);
+        this.tweens.add({ targets: warnText, y: bull.y - 100, alpha: 0, duration: 1500, onComplete: () => warnText.destroy() });
+    }
+}
+
+function spawnDustParticle() {
+    let offsetX = Phaser.Math.Between(-10, 10);
+    let offsetY = Phaser.Math.Between(15, 25);
+    let dust = this.add.circle(horse.x + offsetX, horse.y + offsetY, Phaser.Math.Between(3, 6), 0xBBAA88, 0.6);
+    dustParticles.push({ sprite: dust, life: 1.0 });
+}
+
+function updateDustParticles() {
+    for (let i = dustParticles.length - 1; i >= 0; i--) {
+        let p = dustParticles[i];
+        p.life -= 0.03;
+        if (p.sprite && p.sprite.active) {
+            p.sprite.alpha = p.life * 0.6;
+            p.sprite.scaleX = 1 + (1 - p.life) * 0.5;
+            p.sprite.scaleY = 1 + (1 - p.life) * 0.5;
+        }
+        if (p.life <= 0) {
+            if (p.sprite && p.sprite.active) p.sprite.destroy();
+            dustParticles.splice(i, 1);
+        }
+    }
+}
+
+function createBloodStain(x, y) {
+    let stain = this.add.graphics();
+    stain.fillStyle(0x660000, 0.7);
+    stain.fillEllipse(0, 0, Phaser.Math.Between(20, 35), Phaser.Math.Between(15, 25));
+    for (let i = 0; i < 4; i++) {
+        let bx = Phaser.Math.Between(-20, 20);
+        let by = Phaser.Math.Between(-15, 15);
+        stain.fillCircle(bx, by, Phaser.Math.Between(2, 5));
+    }
+    stain.setPosition(x, y);
+    stain.alpha = 0.8;
+    bloodStains.push(stain);
+}
+
+function updateBloodStains() {
+    for (let i = bloodStains.length - 1; i >= 0; i--) {
+        let stain = bloodStains[i];
+        stain.alpha -= 0.002;
+        if (stain.alpha <= 0) {
+            stain.destroy();
+            bloodStains.splice(i, 1);
+        }
+    }
 }
 
 function spawnGrassPatch() {
     if (gameState !== 'playing') return;
-    let a = Math.random() * Math.PI * 2, d = Phaser.Math.Between(600, 1200);
-    let x = horse.x + Math.cos(a) * d, y = horse.y + Math.sin(a) * d;
+    let pos = randomMapPos(600, 1200);
     let patch = this.add.graphics();
     let w = Phaser.Math.Between(150, 300), h = Phaser.Math.Between(80, 150);
     let colors = [0x6DB844, 0x72C04A, 0x68B040, 0x75C84D];
@@ -198,14 +395,13 @@ function spawnGrassPatch() {
     patch.fillEllipse(0, 0, w, h);
     patch.fillStyle(0x8FD860, 0.2);
     patch.fillEllipse(-w * 0.2, -h * 0.2, w * 0.4, h * 0.4);
-    patch.setPosition(x, y);
+    patch.setPosition(pos.x, pos.y);
     bgDecorations.add(patch);
 }
 
 function spawnBgHill() {
     if (gameState !== 'playing') return;
-    let a = Math.random() * Math.PI * 2, d = Phaser.Math.Between(700, 1300);
-    let x = horse.x + Math.cos(a) * d, y = horse.y + Math.sin(a) * d;
+    let pos = randomMapPos(700, 1300);
     let hill = this.add.graphics();
     let w = Phaser.Math.Between(120, 250), h = Phaser.Math.Between(60, 120);
     hill.fillStyle(0x3D5A20, 0.3); hill.fillEllipse(5, 10, w * 1.1, h * 0.5);
@@ -213,14 +409,13 @@ function spawnBgHill() {
     hill.fillStyle(colors[Phaser.Math.Between(0, 2)], 0.7); hill.fillEllipse(0, 0, w, h);
     hill.fillStyle(0x7EC850, 0.4); hill.fillEllipse(-w * 0.2, -h * 0.2, w * 0.5, h * 0.5);
     hill.fillStyle(0x3D5A20, 0.3); hill.fillEllipse(w * 0.25, h * 0.25, w * 0.4, h * 0.4);
-    hill.setPosition(x, y);
+    hill.setPosition(pos.x, pos.y);
     bgDecorations.add(hill);
 }
 
 function spawnBgDecoration() {
     if (gameState !== 'playing') return;
-    let a = Math.random() * Math.PI * 2, d = Phaser.Math.Between(500, 1100);
-    let x = horse.x + Math.cos(a) * d, y = horse.y + Math.sin(a) * d;
+    let pos = randomMapPos(500, 1100);
     let t = Phaser.Math.Between(0, 9);
     let deco = this.add.graphics();
     if (t === 0) {
@@ -277,14 +472,13 @@ function spawnBgDecoration() {
         deco.fillCircle(-2, -10, 3); deco.fillCircle(2, -10, 3); deco.fillCircle(0, -12, 3); deco.fillCircle(0, -8, 3);
         deco.fillStyle(0xFFFF00, 1); deco.fillCircle(0, -10, 1.5);
     }
-    deco.setPosition(x, y);
+    deco.setPosition(pos.x, pos.y);
     bgDecorations.add(deco);
 }
 
 function spawnObstacle() {
     if (gameState !== 'playing') return;
-    let a = Math.random() * Math.PI * 2, d = Phaser.Math.Between(500, 900);
-    let x = horse.x + Math.cos(a) * d, y = horse.y + Math.sin(a) * d;
+    let pos = randomMapPos(500, 900);
     let g = this.add.graphics();
     g.fillStyle(0x3D5A20, 0.4); g.fillEllipse(5, 10, 50, 20);
     if (Phaser.Math.Between(0, 1) === 0) {
@@ -297,7 +491,7 @@ function spawnObstacle() {
         g.fillCircle(0, 0, 25); g.fillCircle(-15, 5, 18); g.fillCircle(15, 5, 18); g.fillCircle(0, -10, 20);
         g.fillStyle(0x6DB844, 0.5); g.fillCircle(-5, -8, 10); g.fillCircle(8, 2, 8);
     }
-    g.setPosition(x, y);
+    g.setPosition(pos.x, pos.y);
     bgDecorations.add(g);
 }
 
@@ -326,11 +520,10 @@ function createLightningEffect() {
 
 function spawnGoldenCow() {
     if (gameState !== 'playing') return;
-    let a = Math.random() * Math.PI * 2, d = Phaser.Math.Between(400, 700);
-    let x = horse.x + Math.cos(a) * d, y = horse.y + Math.sin(a) * d;
+    let pos = randomMapPos(400, 700);
     let glow = this.add.circle(0, 0, 25, 0xFFFF00, 0.3);
     glow.setStrokeStyle(2, 0xFFD700, 0.8);
-    let cow = this.add.container(x, y, [glow,
+    let cow = this.add.container(pos.x, pos.y, [glow,
         this.add.rectangle(0, 0, 15, 20, 0xFFD700),
         this.add.circle(-4, -2, 3, 0xFFA500), this.add.circle(3, 4, 2.5, 0xFFA500),
         this.add.rectangle(0, -12, 8, 9, 0xFFD700),
@@ -351,17 +544,10 @@ function collectGoldenCow(h, cow) {
     score += 50;
     this.goldenCowText.setText('✨ ' + goldenCowsCollected + '/3');
     
-    // Добавляем 5 коров в стадо
-    for (let i = 0; i < 5; i++) {
-        let newCow = createCow.call(this, horse.x, horse.y + 50 + i * 10);
-        cows.push(newCow);
+    if (goldenCowsCollected >= 3 && !achievements.goldenFever) {
+        achievements.goldenFever = true;
+        showAchievement.call(this, '✨ ЗОЛОТАЯ ЛИХОРАДКА!');
     }
-    
-    let flash = this.add.circle(horse.x, horse.y, 20, 0xFFD700, 0.9);
-    this.tweens.add({ targets: flash, alpha: 0, scale: 3, duration: 400, onComplete: () => flash.destroy() });
-    
-    let bonusText = this.add.text(horse.x, horse.y - 60, '+5 🐄 +50', { fontSize: '24px', fill: '#FFD700', fontStyle: 'bold' }).setOrigin(0.5);
-    this.tweens.add({ targets: bonusText, y: horse.y - 120, alpha: 0, duration: 1000, onComplete: () => bonusText.destroy() });
     
     if (goldenCowsCollected >= 3) {
         goldenCowsCollected = 0;
@@ -371,6 +557,21 @@ function collectGoldenCow(h, cow) {
         let t = this.add.text(600, 300, '✨ +1 ЖИЗНЬ!', { fontSize: '48px', fill: '#FFD700', fontStyle: 'bold', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setScrollFactor(0);
         this.tweens.add({ targets: t, y: 200, alpha: 0, scale: 1.5, duration: 2000, onComplete: () => t.destroy() });
     }
+    
+    for (let i = 0; i < 5; i++) {
+        let newCow = createCow.call(this, horse.x, horse.y + 50 + i * 10);
+        cows.push(newCow);
+    }
+    
+    let flash = this.add.circle(horse.x, horse.y, 20, 0xFFD700, 0.9);
+    this.tweens.add({ targets: flash, alpha: 0, scale: 3, duration: 400, onComplete: () => flash.destroy() });
+    let bonusText = this.add.text(horse.x, horse.y - 60, '+5 🐄 +50', { fontSize: '24px', fill: '#FFD700', fontStyle: 'bold' }).setOrigin(0.5);
+    this.tweens.add({ targets: bonusText, y: horse.y - 120, alpha: 0, duration: 1000, onComplete: () => bonusText.destroy() });
+}
+
+function showAchievement(text) {
+    let t = this.add.text(600, 250, ' ' + text, { fontSize: '36px', fill: '#FFD700', fontStyle: 'bold', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setScrollFactor(0);
+    this.tweens.add({ targets: t, y: 150, alpha: 0, scale: 1.3, duration: 2500, onComplete: () => t.destroy() });
 }
 
 function createSkillButtons() {
@@ -388,7 +589,13 @@ function createSkillButtons() {
         let cost = this.add.text(0, 15, s.cost + ' коров', { fontSize: '13px', fill: '#666666' }).setOrigin(0.5);
         btn.add([bg, txt, cost]);
         btn.setScrollFactor(0);
-        btn.skillId = s.id; btn.cost = s.cost; btn.isActive = false;
+        btn.skillId = s.id;
+        btn.cost = s.cost;
+        btn.isActive = false;
+        btn.btnX = 1050;
+        btn.btnY = s.y;
+        btn.btnW = 110;
+        btn.btnH = 60;
         skillButtons.push(btn);
         gameUI.add(btn);
     });
@@ -396,13 +603,15 @@ function createSkillButtons() {
 
 function checkSkillButtonClick(pointer) {
     for (let btn of skillButtons) {
-        let bounds = btn.getBounds();
-        if (Phaser.Geom.Rectangle.Contains(bounds, pointer.x, pointer.y)) {
-            if (btn.isActive && cowsForSkills >= btn.cost) {
+        let halfW = btn.btnW / 2;
+        let halfH = btn.btnH / 2;
+        if (pointer.x >= btn.btnX - halfW && pointer.x <= btn.btnX + halfW &&
+            pointer.y >= btn.btnY - halfH && pointer.y <= btn.btnY + halfH) {
+            if (cowsForSkills >= btn.cost) {
                 activateSkill.call(this, btn.skillId, btn.cost);
                 cowsForSkills -= btn.cost;
-                btn.isActive = false;
                 updateSkillButtons.call(this);
+                return;
             }
         }
     }
@@ -413,7 +622,8 @@ function updateSkillButtons() {
         let ok = cowsForSkills >= btn.cost;
         btn.isActive = ok;
         let c = ok ? '#00ff00' : '#666666';
-        btn.list[0].setStrokeStyle(3, ok ? 0x00ff00 : 0x666666);
+        let border = ok ? 0x00ff00 : 0x666666;
+        btn.list[0].setStrokeStyle(3, border);
         btn.list[1].setColor(c);
         btn.list[2].setColor(c);
     }
@@ -472,19 +682,62 @@ function triggerExplosion() {
     enemies.children.iterate(e => {
         if (e && Phaser.Math.Distance.Between(horse.x, horse.y, e.x, e.y) < 500) {
             if (e.isBoss) { e.hp -= 20; if (e.hp <= 0) killBoss.call(this, e); }
-            else { let ex = e.x, ey = e.y; e.destroy(); score += 10; let f = this.add.circle(ex, ey, 15, 0xFF4400, 0.9); this.tweens.add({ targets: f, alpha: 0, scale: 5, duration: 400, onComplete: () => f.destroy() }); }
+            else { let ex = e.x, ey = e.y; let angle = e.angle; e.destroy(); score += 10; createWolfSkeleton.call(this, ex, ey, false, angle); createBloodStain.call(this, ex, ey); let f = this.add.circle(ex, ey, 15, 0xFF4400, 0.9); this.tweens.add({ targets: f, alpha: 0, scale: 5, duration: 400, onComplete: () => f.destroy() }); }
         }
     });
+    for (let i = bulls.length - 1; i >= 0; i--) {
+        let bull = bulls[i];
+        if (bull && Phaser.Math.Distance.Between(horse.x, horse.y, bull.x, bull.y) < 500) {
+            bull.hp -= 3;
+            bull.angry = true;
+            if (bull.hp <= 0) killBull.call(this, bull);
+        }
+    }
     let exp = this.add.circle(horse.x, horse.y, 50, 0xFF6600, 0.8);
     this.tweens.add({ targets: exp, radius: 500, alpha: 0, duration: 600, onComplete: () => exp.destroy() });
     this.cameras.main.shake(300, 0.03);
 }
 
+function createWolfSkeleton(x, y, isBoss, angle) {
+    let skeleton = this.add.graphics();
+    if (isBoss) {
+        skeleton.lineStyle(3, 0xDDDDDD, 0.8);
+        skeleton.strokeCircle(0, -50, 18);
+        skeleton.strokeCircle(-8, -55, 6); skeleton.strokeCircle(8, -55, 6);
+        skeleton.strokeCircle(0, -45, 4);
+        skeleton.lineBetween(0, -32, 0, 30);
+        for (let i = 0; i < 5; i++) skeleton.strokeEllipse(-12, -20 + i * 10, 24, 8);
+        skeleton.strokeEllipse(0, 35, 20, 12);
+        skeleton.lineBetween(-10, 40, -15, 70); skeleton.lineBetween(10, 40, 15, 70);
+        skeleton.lineBetween(-10, 40, -8, 70); skeleton.lineBetween(10, 40, 8, 70);
+        skeleton.lineBetween(0, 45, 0, 65);
+    } else {
+        skeleton.lineStyle(2, 0xDDDDDD, 0.8);
+        skeleton.strokeCircle(0, -18, 8);
+        skeleton.strokeCircle(-3, -20, 2.5); skeleton.strokeCircle(3, -20, 2.5);
+        skeleton.strokeCircle(0, -15, 1.5);
+        skeleton.lineBetween(0, -10, 0, 12);
+        for (let i = 0; i < 3; i++) skeleton.strokeEllipse(-6, -5 + i * 5, 12, 4);
+        skeleton.strokeEllipse(0, 15, 10, 6);
+        skeleton.lineBetween(-5, 18, -7, 32); skeleton.lineBetween(5, 18, 7, 32);
+        skeleton.lineBetween(-5, 18, -4, 32); skeleton.lineBetween(5, 18, 4, 32);
+        skeleton.lineBetween(0, 20, 0, 30);
+    }
+    skeleton.angle = angle || 0;
+    let container = this.add.container(x, y, [skeleton]);
+    container.alpha = 0.6;
+    wolfSkeletons.add(container);
+    this.tweens.add({ targets: container, alpha: 0, duration: isBoss ? 10000 : 5000, onComplete: () => container.destroy() });
+}
+
 function killBoss(boss) {
-    let bx = boss.x, by = boss.y;
+    let bx = boss.x, by = boss.y, angle = boss.angle;
     boss.destroy();
     bossActive = false;
     score += 500;
+    createWolfSkeleton.call(this, bx, by, true, angle);
+    createBloodStain.call(this, bx, by);
+    if (!achievements.godOfWar) { achievements.godOfWar = true; showAchievement.call(this, '⚔️ GOD OF WAR!'); }
     removeBossDarkness.call(this);
     let flash = this.add.circle(bx, by, 30, 0xff0000, 0.9);
     this.tweens.add({ targets: flash, alpha: 0, scale: 8, duration: 800, onComplete: () => flash.destroy() });
@@ -494,7 +747,7 @@ function killBoss(boss) {
 
 function createBossDarkness() {
     removeBossDarkness.call(this);
-    bossDarkOverlay = this.add.rectangle(0, 0, 20000, 20000, 0x110000, 0);
+    bossDarkOverlay = this.add.rectangle(0, 0, MAP_SIZE, MAP_SIZE, 0x110000, 0);
     bossDarkOverlay.setScrollFactor(1);
     bossDarkOverlay.setDepth(999);
     this.tweens.add({ targets: bossDarkOverlay, alpha: 0.35, duration: 2000, ease: 'Sine.easeIn' });
@@ -508,13 +761,31 @@ function removeBossDarkness() {
     }
 }
 
+function updateBossHPBar() {
+    this.bossHPBar.clear();
+    this.bossHPText.setText('');
+    if (!bossActive) return;
+    let boss = null;
+    enemies.children.iterate(e => { if (e && e.isBoss) boss = e; });
+    if (!boss) return;
+    let barWidth = 400, barHeight = 25, x = 600 - barWidth / 2, y = 30;
+    this.bossHPBar.fillStyle(0x333333, 0.8);
+    this.bossHPBar.fillRect(x, y, barWidth, barHeight);
+    let hpRatio = Math.max(0, boss.hp / 200);
+    this.bossHPBar.fillStyle(0xFF0000, 1);
+    this.bossHPBar.fillRect(x, y, barWidth * hpRatio, barHeight);
+    this.bossHPBar.lineStyle(3, 0xFFFFFF, 1);
+    this.bossHPBar.strokeRect(x, y, barWidth, barHeight);
+    this.bossHPText.setText(' БОСС: ' + Math.max(0, Math.ceil(boss.hp)) + ' / 200');
+}
+
 function update() {
     if (gameState !== 'playing') return;
 
     if (gameTime - lastDifficultyIncrease >= 120) {
         lastDifficultyIncrease = gameTime;
-        wolfSpawnRate = Math.max(100, wolfSpawnRate - 250);
-        powerUpSpawnRate = Math.max(8000, powerUpSpawnRate - 2000);
+        wolfSpawnRate = Math.max(100, wolfSpawnRate - 150);
+        powerUpSpawnRate = Math.max(5000, powerUpSpawnRate - 3000);
     }
 
     if (!bossActive && gameTime - lastBossSpawn >= 60) {
@@ -532,12 +803,18 @@ function update() {
     horse.body.setVelocityX(moveX * baseHorseSpeed);
     horse.body.setVelocityY(moveY * baseHorseSpeed);
 
-    if (moveX !== 0 || moveY !== 0) {
+    let isMoving = (moveX !== 0 || moveY !== 0);
+    if (isMoving) {
         let ta = Phaser.Math.RadToDeg(Math.atan2(moveY, moveX)) + 90;
         let diff = ta - horse.angle;
         while (diff > 180) diff -= 360; while (diff < -180) diff += 360;
         horse.angle += diff * 0.15;
+        if (gameTime - lastDustTime > 0.1) {
+            spawnDustParticle.call(this);
+            lastDustTime = gameTime;
+        }
     }
+    updateDustParticles.call(this);
 
     let wmx = mouseX + this.cameras.main.scrollX;
     let wmy = mouseY + this.cameras.main.scrollY;
@@ -546,51 +823,51 @@ function update() {
     while (diff > 180) diff -= 360; while (diff < -180) diff += 360;
     cowboy.angle += diff * 0.3;
 
-    gameTime += 1/60;
+    gameTime += 1 / 60;
     let mins = Math.floor(gameTime / 60);
     let secs = Math.floor(gameTime % 60);
     this.timeText.setText('Время: ' + mins + ':' + (secs < 10 ? '0' : '') + secs);
+    
+    if (gameTime >= 600 && !achievements.survivor) { achievements.survivor = true; showAchievement.call(this, '⏰ ВЫЖИВШИЙ!'); }
 
     if (gameTime - lastPowerUpSpawn >= powerUpSpawnRate / 1000) { lastPowerUpSpawn = gameTime; spawnPowerUp.call(this); }
 
     cleanupWorld.call(this);
     deadCows = deadCows.filter(dc => { dc.alpha -= 0.003; if (dc.alpha <= 0) { dc.destroy(); return false; } return true; });
+    updateBloodStains.call(this);
+    updateBossHPBar.call(this);
 
     goldenCows.children.iterate(cow => {
         if (cow) {
+            clampToMap(cow);
             let dx = cow.x - horse.x, dy = cow.y - horse.y;
             let dist = Math.sqrt(dx * dx + dy * dy);
             if (dist < 300 && dist > 0) {
                 cow.x += (dx / dist) * cow.fleeSpeed;
                 cow.y += (dy / dist) * cow.fleeSpeed;
                 let targetAngle = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90;
-                let diff = targetAngle - cow.angle;
-                while (diff > 180) diff -= 360;
-                while (diff < -180) diff += 360;
-                cow.angle += diff * 0.15;
+                let d = targetAngle - cow.angle;
+                while (d > 180) d -= 360; while (d < -180) d += 360;
+                cow.angle += d * 0.15;
             }
         }
     });
 
     if (dogCompanion) {
-        dogCompanion.attackTimer += 1/60;
+        dogCompanion.attackTimer += 1 / 60;
         let closest = null, minD = 450;
         enemies.children.iterate(e => { if (e) { let d = Phaser.Math.Distance.Between(dogCompanion.x, dogCompanion.y, e.x, e.y); if (d < minD) { minD = d; closest = e; } } });
         if (closest) {
             let dx = closest.x - dogCompanion.x, dy = closest.y - dogCompanion.y;
             let dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist > 30) {
-                dogCompanion.x += (dx / dist) * 5;
-                dogCompanion.y += (dy / dist) * 5;
-                let targetAngle = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90;
-                let diff = targetAngle - dogCompanion.angle;
-                while (diff > 180) diff -= 360;
-                while (diff < -180) diff += 360;
-                dogCompanion.angle += diff * 0.25;
-            }
+            if (dist > 30) { dogCompanion.x += (dx / dist) * 5; dogCompanion.y += (dy / dist) * 5; }
+            let targetAngle = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90;
+            let d2 = targetAngle - dogCompanion.angle;
+            while (d2 > 180) d2 -= 360; while (d2 < -180) d2 += 360;
+            dogCompanion.angle += d2 * 0.25;
             if (dist < 40) {
-                if (closest.isBoss) { closest.hp -= 10; if (closest.hp <= 0) killBoss.call(this, closest); }
-                else { closest.destroy(); score += 10; }
+                if (closest.isBoss) { closest.hp -= 70; if (closest.hp <= 0) killBoss.call(this, closest); }
+                else { let angle = closest.angle; closest.destroy(); score += 10; createWolfSkeleton.call(this, closest.x, closest.y, false, angle); createBloodStain.call(this, closest.x, closest.y); }
                 let f = this.add.circle(closest.x, closest.y, 15, 0xFFD700, 0.9);
                 this.tweens.add({ targets: f, alpha: 0, scale: 4, duration: 300, onComplete: () => f.destroy() });
             }
@@ -599,24 +876,142 @@ function update() {
             let tx = horse.x + Math.cos(a) * 450, ty = horse.y + Math.sin(a) * 450;
             let dx = tx - dogCompanion.x, dy = ty - dogCompanion.y;
             let dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist > 5) { dogCompanion.x += (dx / dist) * 3; dogCompanion.y += (dy / dist) * 3; }
+            let targetAngle = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90;
+            let d2 = targetAngle - dogCompanion.angle;
+            while (d2 > 180) d2 -= 360; while (d2 < -180) d2 += 360;
+            dogCompanion.angle += d2 * 0.2;
+        }
+    }
+
+    // === ЛОГИКА БЫКОВ ===
+    for (let i = bulls.length - 1; i >= 0; i--) {
+        let bull = bulls[i];
+        if (!bull || !bull.active) { bulls.splice(i, 1); continue; }
+        clampToMap(bull);
+        bull.attackTimer += 1 / 60;
+        
+        if (bull.angry) {
+            let targetX = horse.x, targetY = horse.y;
+            let minDist = Phaser.Math.Distance.Between(bull.x, bull.y, horse.x, horse.y);
+            let targetType = 'horse';
+            
+            // Ищем ближайшую цель: босс, волк или игрок
+            enemies.children.iterate(e => {
+                if (e) {
+                    let d = Phaser.Math.Distance.Between(bull.x, bull.y, e.x, e.y);
+                    if (d < minDist) { 
+                        minDist = d; 
+                        targetX = e.x; 
+                        targetY = e.y; 
+                        targetType = e.isBoss ? 'boss' : 'wolf';
+                    }
+                }
+            });
+            
+            let dx = targetX - bull.x, dy = targetY - bull.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            let bullSpeed = 2.2;
             if (dist > 5) {
-                dogCompanion.x += (dx / dist) * 3;
-                dogCompanion.y += (dy / dist) * 3;
+                bull.x += (dx / dist) * bullSpeed;
+                bull.y += (dy / dist) * bullSpeed;
                 let targetAngle = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90;
-                let diff = targetAngle - dogCompanion.angle;
-                while (diff > 180) diff -= 360;
-                while (diff < -180) diff += 360;
-                dogCompanion.angle += diff * 0.2;
+                let d = targetAngle - bull.angle;
+                while (d > 180) d -= 360; while (d < -180) d += 360;
+                bull.angle += d * 0.2;
+            }
+            
+            // Атака босса-волка (смертельный удар!)
+            if (targetType === 'boss' && dist < 40 && bull.attackTimer > 0.5) {
+                bull.attackTimer = 0;
+                enemies.children.iterate(e => {
+                    if (e && e.isBoss && Phaser.Math.Distance.Between(bull.x, bull.y, e.x, e.y) < 40) {
+                        e.hp -= 50;
+                        // БЫК УМИРАЕТ ПОСЛЕ АТАКИ НА БОССА
+                        killBull.call(this, bull, true);
+                        if (e.hp <= 0) killBoss.call(this, e);
+                        let flash = this.add.circle(e.x, e.y, 30, 0xFF0000, 0.8);
+                        this.tweens.add({ targets: flash, alpha: 0, scale: 3, duration: 400, onComplete: () => flash.destroy() });
+                        let dmgText = this.add.text(e.x, e.y - 40, '-50 HP!', { fontSize: '28px', fill: '#FF0000', fontStyle: 'bold' }).setOrigin(0.5);
+                        this.tweens.add({ targets: dmgText, y: e.y - 80, alpha: 0, duration: 800, onComplete: () => dmgText.destroy() });
+                    }
+                });
+            }
+            // Атака игрока
+            else if (targetType === 'horse' && Phaser.Math.Distance.Between(bull.x, bull.y, horse.x, horse.y) < 35 && bull.attackTimer > 0.8) {
+                bull.attackTimer = 0;
+                loseHP.call(this);
+                this.cameras.main.shake(200, 0.03);
+                let f = this.add.circle(horse.x, horse.y, 20, 0xFF4400, 0.8);
+                this.tweens.add({ targets: f, alpha: 0, scale: 2, duration: 300, onComplete: () => f.destroy() });
+            }
+            // Атака обычных волков
+            else if (targetType === 'wolf') {
+                enemies.children.iterate(e => {
+                    if (e && !e.isBoss && Phaser.Math.Distance.Between(bull.x, bull.y, e.x, e.y) < 35) {
+                        let ex = e.x, ey = e.y;
+                        e.destroy();
+                        createBloodStain.call(this, ex, ey);
+                        createWolfSkeleton.call(this, ex, ey, false, 0);
+                        score += 5;
+                    }
+                });
+            }
+        } else {
+            if (!bull.wanderTarget || Phaser.Math.Distance.Between(bull.x, bull.y, bull.wanderTarget.x, bull.wanderTarget.y) < 20) {
+                let a = Math.random() * Math.PI * 2;
+                let d = Phaser.Math.Between(100, 300);
+                bull.wanderTarget = { 
+                    x: Phaser.Math.Clamp(bull.x + Math.cos(a) * d, -MAP_LIMIT, MAP_LIMIT), 
+                    y: Phaser.Math.Clamp(bull.y + Math.sin(a) * d, -MAP_LIMIT, MAP_LIMIT) 
+                };
+            }
+            let dx = bull.wanderTarget.x - bull.x, dy = bull.wanderTarget.y - bull.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist > 5) {
+                bull.x += (dx / dist) * 0.5;
+                bull.y += (dy / dist) * 0.5;
+                let targetAngle = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90;
+                let d = targetAngle - bull.angle;
+                while (d > 180) d -= 360; while (d < -180) d += 360;
+                bull.angle += d * 0.1;
             }
         }
     }
 
     cowsToCollect.children.iterate(cow => {
         if (cow) {
-            let dx = horse.x - cow.x, dy = horse.y - cow.y;
-            let dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist > 5 && dist < 800) {
-                cow.x += (dx / dist) * 1.5; cow.y += (dy / dist) * 1.5;
+            clampToMap(cow);
+            let bossNearby = false, bossDx = 0, bossDy = 0;
+            enemies.children.iterate(e => {
+                if (e && e.isBoss && Phaser.Math.Distance.Between(cow.x, cow.y, e.x, e.y) < 300) {
+                    bossNearby = true; bossDx = cow.x - e.x; bossDy = cow.y - e.y;
+                }
+            });
+            let bullNearby = false, bullDx = 0, bullDy = 0;
+            bulls.forEach(bull => {
+                if (bull && bull.angry && Phaser.Math.Distance.Between(cow.x, cow.y, bull.x, bull.y) < 250) {
+                    bullNearby = true; bullDx = cow.x - bull.x; bullDy = cow.y - bull.y;
+                }
+            });
+            if (bossNearby) {
+                let dist = Math.sqrt(bossDx * bossDx + bossDy * bossDy);
+                if (dist > 0) { cow.x += (bossDx / dist) * 1.0; cow.y += (bossDy / dist) * 1.0; }
+                let targetAngle = Phaser.Math.RadToDeg(Math.atan2(bossDy, bossDx)) + 90;
+                let d = targetAngle - cow.angle;
+                while (d > 180) d -= 360; while (d < -180) d += 360;
+                cow.angle += d * 0.15;
+            } else if (bullNearby) {
+                let dist = Math.sqrt(bullDx * bullDx + bullDy * bullDy);
+                if (dist > 0) { cow.x += (bullDx / dist) * 1.2; cow.y += (bullDy / dist) * 1.2; }
+                let targetAngle = Phaser.Math.RadToDeg(Math.atan2(bullDy, bullDx)) + 90;
+                let d = targetAngle - cow.angle;
+                while (d > 180) d -= 360; while (d < -180) d += 360;
+                cow.angle += d * 0.15;
+            } else {
+                let dx = horse.x - cow.x, dy = horse.y - cow.y;
+                let dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > 5 && dist < 800) { cow.x += (dx / dist) * 1.0; cow.y += (dy / dist) * 1.0; }
                 let targetAngle = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90;
                 let d = targetAngle - cow.angle;
                 while (d > 180) d -= 360; while (d < -180) d += 360;
@@ -631,46 +1026,82 @@ function update() {
         let td = i === 0 ? 50 : 40;
         let dx = target.x - cow.x, dy = target.y - cow.y;
         let dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist > td) { cow.x += (dx / dist) * 3; cow.y += (dy / dist) * 3; }
-        if (dist > 5) {
-            let a = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90;
-            let d = a - cow.angle;
-            while (d > 180) d -= 360; while (d < -180) d += 360;
-            cow.angle += d * 0.1;
-        }
+        if (dist > td) { cow.x += (dx / dist) * 4; cow.y += (dy / dist) * 4; }
+        clampToMap(cow);
+        let targetAngle = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90;
+        let d = targetAngle - cow.angle;
+        while (d > 180) d -= 360; while (d < -180) d += 360;
+        cow.angle += d * 0.1;
     }
 
     enemies.children.iterate(enemy => {
         if (enemy) {
-            let tx = horse.x, ty = horse.y;
-            let md = Phaser.Math.Distance.Between(horse.x, horse.y, enemy.x, enemy.y);
-            for (let c of cows) { let d = Phaser.Math.Distance.Between(c.x, c.y, enemy.x, enemy.y); if (d < md) { md = d; tx = c.x; ty = c.y; } }
-            cowsToCollect.children.iterate(c => { if (c) { let d = Phaser.Math.Distance.Between(c.x, c.y, enemy.x, enemy.y); if (d < md) { md = d; tx = c.x; ty = c.y; } } });
+            clampToMap(enemy);
+            let tx, ty;
+            if (enemy.isBoss) { tx = horse.x; ty = horse.y; }
+            else {
+                tx = horse.x; ty = horse.y;
+                let md = Phaser.Math.Distance.Between(horse.x, horse.y, enemy.x, enemy.y);
+                for (let c of cows) { let d = Phaser.Math.Distance.Between(c.x, c.y, enemy.x, enemy.y); if (d < md) { md = d; tx = c.x; ty = c.y; } }
+                cowsToCollect.children.iterate(c => { if (c) { let d = Phaser.Math.Distance.Between(c.x, c.y, enemy.x, enemy.y); if (d < md) { md = d; tx = c.x; ty = c.y; } } });
+            }
             let dx = tx - enemy.x, dy = ty - enemy.y;
             let dist = Math.sqrt(dx * dx + dy * dy);
-            let speed = enemy.isBoss ? 2.5 : 1.8;
-            if (dist > 5 && dist < (enemy.isBoss ? 2000 : 800)) {
-                enemy.x += (dx / dist) * speed; enemy.y += (dy / dist) * speed;
-                let a = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90;
-                let d = a - enemy.angle;
-                while (d > 180) d -= 360; while (d < -180) d += 360;
-                enemy.angle += d * 0.15;
-            }
-            for (let i = 0; i < cows.length; i++) {
-                if (Phaser.Math.Distance.Between(enemy.x, enemy.y, cows[i].x, cows[i].y) < 15) { killCowByWolf.call(this, cows[i], enemy); return; }
-            }
-            let atk = false;
-            cowsToCollect.children.iterate(c => {
-                if (c && !atk && Phaser.Math.Distance.Between(enemy.x, enemy.y, c.x, c.y) < 15) {
-                    deadCows.push(createDeadCow.call(this, c.x, c.y));
-                    c.destroy(); enemy.destroy(); atk = true;
+            let speed = enemy.isBoss ? 2.8 : 1.8;
+
+            if (enemy.isBoss) {
+                if (dist > 1200) {
+                    let ta = Math.atan2(dy, dx);
+                    enemy.x = horse.x + Math.cos(ta) * 800;
+                    enemy.y = horse.y + Math.sin(ta) * 800;
+                } else if (dist > 5) {
+                    enemy.x += (dx / dist) * speed; enemy.y += (dy / dist) * speed;
                 }
-            });
+                for (let i = 0; i < cows.length; i++) {
+                    if (Phaser.Math.Distance.Between(enemy.x, enemy.y, cows[i].x, cows[i].y) < 40) {
+                        let eatenCow = cows[i]; cows.splice(i, 1); eatenCow.destroy();
+                        enemy.hp = Math.min(enemy.hp + 25, 200);
+                        let f = this.add.circle(enemy.x, enemy.y, 25, 0xFF0000, 0.8);
+                        this.tweens.add({ targets: f, alpha: 0, scale: 2, duration: 400, onComplete: () => f.destroy() });
+                        let eatText = this.add.text(enemy.x, enemy.y - 30, '+25 HP', { fontSize: '20px', fill: '#00FF00', fontStyle: 'bold' }).setOrigin(0.5);
+                        this.tweens.add({ targets: eatText, y: enemy.y - 60, alpha: 0, duration: 800, onComplete: () => eatText.destroy() });
+                        return;
+                    }
+                }
+                let ateFromMap = false;
+                cowsToCollect.children.iterate(c => {
+                    if (c && !ateFromMap && Phaser.Math.Distance.Between(enemy.x, enemy.y, c.x, c.y) < 40) {
+                        c.destroy(); enemy.hp = Math.min(enemy.hp + 25, 200);
+                        let f = this.add.circle(enemy.x, enemy.y, 25, 0xFF0000, 0.8);
+                        this.tweens.add({ targets: f, alpha: 0, scale: 2, duration: 400, onComplete: () => f.destroy() });
+                        let eatText = this.add.text(enemy.x, enemy.y - 30, '+25 HP', { fontSize: '20px', fill: '#00FF00', fontStyle: 'bold' }).setOrigin(0.5);
+                        this.tweens.add({ targets: eatText, y: enemy.y - 60, alpha: 0, duration: 800, onComplete: () => eatText.destroy() });
+                        ateFromMap = true;
+                    }
+                });
+                if (ateFromMap) return;
+            } else {
+                if (dist > 5 && dist < 800) { enemy.x += (dx / dist) * speed; enemy.y += (dy / dist) * speed; }
+                for (let i = 0; i < cows.length; i++) {
+                    if (Phaser.Math.Distance.Between(enemy.x, enemy.y, cows[i].x, cows[i].y) < 15) { killCowByWolf.call(this, cows[i], enemy); return; }
+                }
+                let atk = false;
+                cowsToCollect.children.iterate(c => {
+                    if (c && !atk && Phaser.Math.Distance.Between(enemy.x, enemy.y, c.x, c.y) < 15) {
+                        deadCows.push(createDeadCow.call(this, c.x, c.y, c.angle));
+                        c.destroy(); enemy.destroy(); atk = true;
+                    }
+                });
+            }
+            let a = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90;
+            let d = a - enemy.angle;
+            while (d > 180) d -= 360; while (d < -180) d += 360;
+            enemy.angle += d * 0.15;
         }
     });
 
     if (activePowerUp) {
-        powerUpTimer -= 1/60;
+        powerUpTimer -= 1 / 60;
         if (powerUpTimer <= 0) deactivatePowerUp.call(this);
         else powerUpText.setText(activePowerUp.name + ': ' + Math.ceil(powerUpTimer) + 's');
     }
@@ -682,11 +1113,20 @@ function update() {
         else if (activePowerUp.type === 'minigun') fireRate = 17;
     }
     
-    if (this.time.now > nextFireTime) {
-        shoot.call(this);
-        nextFireTime = this.time.now + fireRate;
-    }
-    bullets.children.iterate(b => { if (b && Phaser.Math.Distance.Between(b.x, b.y, horse.x, horse.y) > 1000) b.destroy(); });
+    if (this.time.now > nextFireTime) { shoot.call(this); nextFireTime = this.time.now + fireRate; }
+    
+    bullets.children.iterate(b => { 
+        if (!b) return;
+        if (Phaser.Math.Distance.Between(b.x, b.y, horse.x, horse.y) > 1000) { b.destroy(); return; }
+        for (let i = 0; i < bulls.length; i++) {
+            let bull = bulls[i];
+            if (bull && bull.active && Phaser.Math.Distance.Between(b.x, b.y, bull.x, bull.y) < 25) {
+                b.destroy();
+                hitBull.call(this, bull);
+                return;
+            }
+        }
+    });
 
     this.cowCountText.setText('Коровы: ' + cows.length);
     this.scoreText.setText('Счет: ' + score);
@@ -696,6 +1136,7 @@ function update() {
 function cleanupWorld() {
     let cx = horse.x, cy = horse.y;
     bgDecorations.children.iterate(d => { if (d && Phaser.Math.Distance.Between(d.x, d.y, cx, cy) > 1200) d.destroy(); });
+    wolfSkeletons.children.iterate(s => { if (s && Phaser.Math.Distance.Between(s.x, s.y, cx, cy) > 1200) s.destroy(); });
     cowsToCollect.children.iterate(c => { if (c && Phaser.Math.Distance.Between(c.x, c.y, cx, cy) > 1200) c.destroy(); });
     goldenCows.children.iterate(c => { if (c && Phaser.Math.Distance.Between(c.x, c.y, cx, cy) > 1200) c.destroy(); });
     powerUps.children.iterate(p => { if (p && Phaser.Math.Distance.Between(p.x, p.y, cx, cy) > 1200) p.destroy(); });
@@ -705,9 +1146,8 @@ function cleanupWorld() {
 
 function spawnEnemy() {
     if (gameState !== 'playing') return;
-    let a = Math.random() * Math.PI * 2, d = Phaser.Math.Between(400, 600);
-    let x = horse.x + Math.cos(a) * d, y = horse.y + Math.sin(a) * d;
-    let w = this.add.container(x, y, [
+    let pos = randomMapPos(400, 600);
+    let w = this.add.container(pos.x, pos.y, [
         this.add.ellipse(0, 0, 14, 20, 0x696969), this.add.ellipse(0, -12, 10, 12, 0x808080),
         this.add.triangle(-4, -18, 0, 0, -3, -6, 3, -6, 0x555555), this.add.triangle(4, -18, 0, 0, -3, -6, 3, -6, 0x555555),
         this.add.ellipse(0, -16, 6, 5, 0xA9A9A9),
@@ -719,7 +1159,7 @@ function spawnEnemy() {
     enemies.add(w);
 }
 
-function spawnCow() { if (gameState !== 'playing') return; let a = Math.random() * Math.PI * 2, d = 500; cowsToCollect.add(createCow.call(this, horse.x + Math.cos(a) * d, horse.y + Math.sin(a) * d)); }
+function spawnCow() { if (gameState !== 'playing') return; let pos = randomMapPos(300, 500); cowsToCollect.add(createCow.call(this, pos.x, pos.y)); }
 
 function createCow(x, y) {
     return this.add.container(x, y, [
@@ -733,15 +1173,16 @@ function createCow(x, y) {
 
 function spawnPowerUp() {
     if (gameState !== 'playing') return;
-    let a = Math.random() * Math.PI * 2, d = Phaser.Math.Between(300, 600);
-    let x = horse.x + Math.cos(a) * d, y = horse.y + Math.sin(a) * d;
+    let pos = randomMapPos(300, 600);
     let types = ['shotgun', 'machinegun', 'minigun', 'multishot'];
     let type = Phaser.Utils.Array.GetRandom(types);
     let names = { shotgun: '🔫 Дробовик', machinegun: '⚡ Автомат', minigun: '🔥 Пулемет', multishot: '⭐ Пушка' };
-    let icons = { shotgun: '🔫', machinegun: '⚡', minigun: '🔥', multishot: '⭐' };
-    let box = this.add.rectangle(0, 0, 40, 40, 0x8B4513); box.setStrokeStyle(3, 0x654321);
-    let q = this.add.text(0, 0, icons[type], { fontSize: '28px' }).setOrigin(0.5);
-    let pu = this.add.container(x, y, [box, q]); pu.type = type; pu.name = names[type];
+    let box = this.add.rectangle(0, 0, 44, 44, 0x8B4513);
+    box.setStrokeStyle(4, 0x654321);
+    let lid = this.add.rectangle(0, -22, 48, 8, 0xA0522D);
+    let questionMark = this.add.text(0, 2, '?', { fontSize: '32px', fill: '#FFD700', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5);
+    let pu = this.add.container(pos.x, pos.y, [box, lid, questionMark]);
+    pu.type = type; pu.name = names[type];
     powerUps.add(pu);
     this.tweens.add({ targets: pu, scale: 1.1, duration: 600, yoyo: true, repeat: -1 });
 }
@@ -750,30 +1191,23 @@ function collectPowerUp(h, pu) { pu.destroy(); activatePowerUp.call(this, pu.typ
 
 function activatePowerUp(type, name) {
     if (activePowerUp) deactivatePowerUp.call(this);
-    activePowerUp = { type: type, name: name }; 
-    powerUpTimer = 20;
+    activePowerUp = { type: type, name: name }; powerUpTimer = 20;
     updateCowboyWeapon.call(this);
     let f = this.add.circle(horse.x, horse.y, 30, 0xffffff, 0.8);
     this.tweens.add({ targets: f, alpha: 0, scale: 2, duration: 300, onComplete: () => f.destroy() });
 }
 
-function deactivatePowerUp() { 
-    activePowerUp = null; 
-    powerUpTimer = 0; 
-    powerUpText.setText(''); 
-    updateCowboyWeapon.call(this);
-}
+function deactivatePowerUp() { activePowerUp = null; powerUpTimer = 0; powerUpText.setText(''); updateCowboyWeapon.call(this); }
 
 function spawnBoss() {
     if (gameState !== 'playing' || bossActive) return;
     bossActive = true;
     this.cameras.main.shake(500, 0.04);
     createBossDarkness.call(this);
-    let bt = this.add.text(600, 400, '🐺 БОСС-ВОЛК! 🐺', { fontSize: '72px', fill: '#ff0000', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setScrollFactor(0);
+    let bt = this.add.text(600, 400, ' БОСС-ВОЛК! 🐺', { fontSize: '72px', fill: '#ff0000', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setScrollFactor(0);
     this.tweens.add({ targets: bt, alpha: 0, scale: 2, duration: 3000, onComplete: () => bt.destroy() });
-    let a = Math.random() * Math.PI * 2, d = 400;
-    let x = horse.x + Math.cos(a) * d, y = horse.y + Math.sin(a) * d;
-    let boss = this.add.container(x, y, [
+    let pos = randomMapPos(350, 450);
+    let boss = this.add.container(pos.x, pos.y, [
         this.add.ellipse(0, 0, 42, 60, 0x440000), this.add.ellipse(0, -36, 30, 36, 0x550000),
         this.add.triangle(-12, -54, 0, 0, -9, -18, 9, -18, 0x330000), this.add.triangle(12, -54, 0, 0, -9, -18, 9, -18, 0x330000),
         this.add.ellipse(0, -48, 18, 15, 0x660000),
@@ -782,7 +1216,8 @@ function spawnBoss() {
         this.add.rectangle(-12, 18, 6, 18, 0x330000), this.add.rectangle(12, 18, 6, 18, 0x330000),
         this.add.rectangle(-12, 28, 6, 18, 0x330000), this.add.rectangle(12, 28, 6, 18, 0x330000)
     ]);
-    boss.isBoss = true; boss.hp = 80; enemies.add(boss);
+    boss.isBoss = true; boss.hp = 200;
+    enemies.add(boss);
     let aura = this.add.circle(0, 0, 60, 0xff0000, 0.2); aura.setStrokeStyle(3, 0xff0000, 0.6);
     boss.add(aura);
     this.tweens.add({ targets: aura, scale: 1.3, alpha: 0.1, duration: 800, yoyo: true, repeat: -1 });
@@ -790,8 +1225,8 @@ function spawnBoss() {
 
 function shoot() {
     let ar = Phaser.Math.DegToRad(cowboy.angle);
-    let bx = horse.x + Math.cos(ar - Math.PI/2) * 14;
-    let by = horse.y + Math.sin(ar - Math.PI/2) * 14;
+    let bx = horse.x + Math.cos(ar - Math.PI / 2) * 14;
+    let by = horse.y + Math.sin(ar - Math.PI / 2) * 14;
     let wmx = mouseX + this.cameras.main.scrollX, wmy = mouseY + this.cameras.main.scrollY;
     let angle = Phaser.Math.Angle.Between(bx, by, wmx, wmy);
     let bs = 600;
@@ -807,7 +1242,7 @@ function shoot() {
     this.tweens.add({ targets: mf, alpha: 0, scale: 1.5, duration: 100, onComplete: () => mf.destroy() });
 }
 
-function mkBullet(x, y, a, s, color = 0x222222) {
+function mkBullet(x, y, a, s, color) {
     let b = this.add.circle(x, y, 4, color);
     this.physics.add.existing(b); bullets.add(b);
     b.body.setVelocity(Math.cos(a) * s, Math.sin(a) * s);
@@ -820,13 +1255,19 @@ function hitBulletEnemy(b, e) {
         if (e.hp <= 0) killBoss.call(this, e);
         else { let f = this.add.circle(e.x, e.y, 10, 0xffffff, 0.8); this.tweens.add({ targets: f, alpha: 0, scale: 2, duration: 200, onComplete: () => f.destroy() }); }
     } else {
-        e.destroy(); score += 10;
+        e.destroy(); score += 10; wolvesKilled++;
+        createWolfSkeleton.call(this, e.x, e.y, false, e.angle);
+        createBloodStain.call(this, e.x, e.y);
+        if (wolvesKilled >= 10 && !achievements.firstBlood) { achievements.firstBlood = true; showAchievement.call(this, '🗡️ ПЕРВАЯ КРОВЬ!'); }
+        if (wolvesKilled >= 100 && !achievements.hunter) { achievements.hunter = true; showAchievement.call(this, '🏹 ОХОТНИК!'); }
+        if (wolvesKilled >= 1000 && !achievements.legend) { achievements.legend = true; showAchievement.call(this, '👑 ЛЕГЕНДА!'); }
         let f = this.add.circle(e.x, e.y, 10, 0xFFFFFF, 0.8);
         this.tweens.add({ targets: f, alpha: 0, scale: 3, duration: 250, onComplete: () => f.destroy() });
     }
 }
 
 function hitEnemy(h, e) {
+    if (e.isBoss) { loseHP.call(this); this.cameras.main.shake(200, 0.02); return; }
     e.destroy(); this.cameras.main.shake(200, 0.02);
     if (cows.length > 0) { cows.pop().destroy(); let f = this.add.circle(horse.x, horse.y, 15, 0xFFAA00, 0.8); this.tweens.add({ targets: f, alpha: 0, scale: 2, duration: 300, onComplete: () => f.destroy() }); }
     else loseHP.call(this);
@@ -846,47 +1287,119 @@ function collectCow(h, cow) {
     score += 5; totalCowsCollected++; totalCowsEverSaved++;
     localStorage.setItem('totalCowsEverSaved', totalCowsEverSaved);
     cowsForSkills++;
+    if (totalCowsCollected >= 20 && !achievements.shepherd) { achievements.shepherd = true; showAchievement.call(this, '🐕 ПАСТУХ!'); }
     let f = this.add.circle(horse.x, horse.y, 15, 0xFFFF00, 0.8);
     this.tweens.add({ targets: f, alpha: 0, scale: 2, duration: 300, onComplete: () => f.destroy() });
 }
 
 function killCowByWolf(cow, wolf) {
     cows = cows.filter(c => c !== cow);
-    deadCows.push(createDeadCow.call(this, cow.x, cow.y));
+    deadCows.push(createDeadCow.call(this, cow.x, cow.y, cow.angle));
     eatingWolves.push(wolf);
     let f = this.add.circle(cow.x, cow.y, 15, 0xFF0000, 0.8);
     this.tweens.add({ targets: f, alpha: 0, scale: 2.5, duration: 300, onComplete: () => f.destroy() });
     cow.destroy();
 }
 
-function createDeadCow(x, y) {
-    let c = this.add.container(x, y, [
-        this.add.rectangle(0, 0, 15, 20, 0xCCCCCC), this.add.circle(-4, -2, 3, 0x666666), this.add.circle(3, 4, 2.5, 0x666666),
-        this.add.rectangle(0, -12, 8, 9, 0xCCCCCC), this.add.circle(-2, -13, 1, 0xFF0000), this.add.circle(2, -13, 1, 0xFF0000)
-    ]); c.angle = 90; c.alpha = 0.8; return c;
+function createDeadCow(x, y, angle) {
+    let skeleton = this.add.graphics();
+    skeleton.lineStyle(2, 0xDDDDDD, 0.8);
+    skeleton.strokeCircle(0, -15, 6);
+    skeleton.lineBetween(-4, -20, -8, -28); skeleton.lineBetween(4, -20, 8, -28);
+    skeleton.strokeCircle(-2, -16, 1.5); skeleton.strokeCircle(2, -16, 1.5);
+    skeleton.lineBetween(0, -9, 0, 10);
+    for (let i = 0; i < 3; i++) skeleton.strokeEllipse(-5, -4 + i * 4, 10, 3);
+    skeleton.strokeEllipse(0, 13, 8, 5);
+    skeleton.lineBetween(-4, 16, -5, 28); skeleton.lineBetween(4, 16, 5, 28);
+    let container = this.add.container(x, y, [skeleton]);
+    container.angle = angle || 0; container.alpha = 0.6;
+    return container;
 }
 
 function gameOver() {
     gameState = 'gameover';
+    document.querySelectorAll('button').forEach(b => b.remove());
+    
     if (score > highScore) { highScore = score; localStorage.setItem('cowboyHighScore', highScore); }
     removeBossDarkness.call(this);
     
     let goUI = this.add.container(600, 400);
     goUI.setScrollFactor(0);
-    goUI.add(this.add.rectangle(0, 0, 900, 600, 0x000000, 0.9).setStrokeStyle(4, 0xFF0000));
-    goUI.add(this.add.text(0, -220, '💀 GAME OVER 💀', { fontSize: '56px', fill: '#ff0000', fontStyle: 'bold', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5));
-    goUI.add(this.add.text(0, -150, 'Счет: ' + score, { fontSize: '32px', fill: '#ffffff' }).setOrigin(0.5));
-    goUI.add(this.add.text(0, -110, '🏆 Рекорд: ' + highScore, { fontSize: '28px', fill: '#ffff00' }).setOrigin(0.5));
-    goUI.add(this.add.text(0, -70, '🐄 Спасено: ' + totalCowsCollected, { fontSize: '24px', fill: '#aaffaa' }).setOrigin(0.5));
-    goUI.add(this.add.text(0, -40, '✨ Золотых: ' + goldenCowsCollected, { fontSize: '24px', fill: '#FFD700' }).setOrigin(0.5));
-    goUI.add(this.add.text(0, 10, 'Всего за все игры: ' + totalCowsEverSaved + ' 🐄 | ' + totalGoldenCowsEver + ' ✨', { fontSize: '20px', fill: '#88ff88' }).setOrigin(0.5));
+    goUI.add(this.add.rectangle(0, 0, 900, 750, 0x000000, 0.95).setStrokeStyle(4, 0xFF0000));
+    goUI.add(this.add.text(0, -320, '💀 GAME OVER 💀', { fontSize: '56px', fill: '#ff0000', fontStyle: 'bold', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5));
+    goUI.add(this.add.text(0, -260, 'Счет: ' + score, { fontSize: '32px', fill: '#ffffff' }).setOrigin(0.5));
+    goUI.add(this.add.text(0, -220, '🏆 Рекорд: ' + highScore, { fontSize: '28px', fill: '#ffff00' }).setOrigin(0.5));
+    goUI.add(this.add.text(0, -185, '🐄 Спасено: ' + totalCowsCollected + ' | ✨ Золотых: ' + goldenCowsCollected, { fontSize: '22px', fill: '#aaffaa' }).setOrigin(0.5));
+    goUI.add(this.add.text(0, -155, '🐺 Волков: ' + wolvesKilled + ' | 🐂 Быков: ' + bullsKilled, { fontSize: '20px', fill: '#ffaaaa' }).setOrigin(0.5));
     
-    // HTML КНОПКА ПОВЕРХ CANVAS — не зависит от Phaser!
-    let btn = document.createElement('button');
-    btn.textContent = '▶ ИГРАТЬ';
-    btn.style.cssText = 'position:absolute;left:50%;top:68%;transform:translate(-50%,-50%);padding:15px 50px;font-size:28px;font-weight:bold;color:white;background:#228B22;border:4px solid #00FF00;border-radius:10px;cursor:pointer;z-index:9999;font-family:Arial;';
-    btn.onmouseover = () => btn.style.background = '#32CD32';
-    btn.onmouseout = () => btn.style.background = '#228B22';
-    btn.onclick = () => { window.location.reload(); };
-    document.body.appendChild(btn);
+    goUI.add(this.add.text(0, -115, ' ДОСТИЖЕНИЯ', { fontSize: '26px', fill: '#FFD700', fontStyle: 'bold' }).setOrigin(0.5));
+    
+    let achievementList = [
+        { name: '🗡️ Первая кровь (10 волков)', unlocked: achievements.firstBlood },
+        { name: '🐕 Пастух (20 коров)', unlocked: achievements.shepherd },
+        { name: '️ God of War (босс)', unlocked: achievements.godOfWar },
+        { name: ' Выживший (10 минут)', unlocked: achievements.survivor },
+        { name: '✨ Золотая лихорадка', unlocked: achievements.goldenFever },
+        { name: '🏹 Охотник (100 волков)', unlocked: achievements.hunter },
+        { name: '👑 Легенда (1000 волков)', unlocked: achievements.legend },
+        { name: ' Тореадор (3 быка)', unlocked: achievements.bullfighter }
+    ];
+    
+    let yPos = -80;
+    achievementList.forEach(a => {
+        let color = a.unlocked ? '#00FF00' : '#666666';
+        let icon = a.unlocked ? '✅' : '❌';
+        goUI.add(this.add.text(0, yPos, icon + ' ' + a.name, { fontSize: '18px', fill: color }).setOrigin(0.5));
+        yPos += 25;
+    });
+    
+    goUI.add(this.add.text(0, yPos + 15, 'Всего за все игры: ' + totalCowsEverSaved + ' 🐄 | ' + totalGoldenCowsEver + ' ✨', { fontSize: '16px', fill: '#88ff88' }).setOrigin(0.5));
+    
+    let playBtn = document.createElement('button');
+    playBtn.textContent = '▶ ИГРАТЬ СНОВА';
+    playBtn.style.cssText = 'position:absolute;left:50%;top:82%;transform:translate(-50%,-50%);padding:12px 40px;font-size:24px;font-weight:bold;color:white;background:#228B22;border:4px solid #00FF00;border-radius:10px;cursor:pointer;z-index:9999;font-family:Arial;';
+    playBtn.onmouseover = () => playBtn.style.background = '#32CD32';
+    playBtn.onmouseout = () => playBtn.style.background = '#228B22';
+    playBtn.onclick = () => { window.location.reload(); };
+    document.body.appendChild(playBtn);
+    
+    let shareBtn = document.createElement('button');
+    shareBtn.textContent = '📋 ПОДЕЛИТЬСЯ';
+    shareBtn.style.cssText = 'position:absolute;left:50%;top:92%;transform:translate(-50%,-50%);padding:10px 30px;font-size:20px;font-weight:bold;color:white;background:#4444CC;border:3px solid #6666FF;border-radius:10px;cursor:pointer;z-index:9999;font-family:Arial;';
+    shareBtn.onmouseover = () => shareBtn.style.background = '#5555DD';
+    shareBtn.onmouseout = () => shareBtn.style.background = '#4444CC';
+    shareBtn.onclick = () => {
+        let mins = Math.floor(gameTime / 60);
+        let secs = Math.floor(gameTime % 60);
+        let timeStr = mins + ':' + (secs < 10 ? '0' : '') + secs;
+        let unlockedCount = achievementList.filter(a => a.unlocked).length;
+        let shareText = '🤠 КОВБОЙ И СТАДО 🐄\n' +
+            '━━━━━━━━━━━━━━\n' +
+            '🏆 Счёт: ' + score + '\n' +
+            '️ Время: ' + timeStr + '\n' +
+            '🐄 Спасено коров: ' + totalCowsCollected + '\n' +
+            '✨ Золотых коров: ' + goldenCowsCollected + '\n' +
+            '🐺 Волков убито: ' + wolvesKilled + '\n' +
+            '🐂 Быков убито: ' + bullsKilled + '\n' +
+            '🏅 Достижений: ' + unlockedCount + '/' + achievementList.length + '\n' +
+            '━━━━━━━━━━━━━━\n' +
+            '🔗 Попробуй сам!';
+        
+        navigator.clipboard.writeText(shareText).then(() => {
+            shareBtn.textContent = '✅ СКОПИРОВАНО!';
+            shareBtn.style.background = '#228B22';
+            setTimeout(() => { shareBtn.textContent = '📋 ПОДЕЛИТЬСЯ'; shareBtn.style.background = '#4444CC'; }, 2000);
+        }).catch(() => {
+            let textarea = document.createElement('textarea');
+            textarea.value = shareText;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            shareBtn.textContent = '✅ СКОПИРОВАНО!';
+            shareBtn.style.background = '#228B22';
+            setTimeout(() => { shareBtn.textContent = '📋 ПОДЕЛИТЬСЯ'; shareBtn.style.background = '#4444CC'; }, 2000);
+        });
+    };
+    document.body.appendChild(shareBtn);
 }
