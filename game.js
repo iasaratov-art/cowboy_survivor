@@ -42,6 +42,14 @@ let bloodStains = [];
 let dustParticles = [];
 let lastDustTime = 0;
 
+// === ОПТИМИЗАЦИЯ ===
+const MAX_DECORATIONS = 150;
+const MAX_ENEMIES = 30;
+const MAX_BLOOD_STAINS = 20;
+const MAX_SKELETONS = 15;
+let lastMoveTime = 0;
+let isMoving = false;
+
 function preload() {}
 
 function create() {
@@ -71,25 +79,57 @@ function createForestBorders() {
     g.fillRect(MAP_HALF - 200, -MAP_HALF, 200, MAP_SIZE);
 }
 
+// === НОВОЕ СТАРТОВОЕ ОКНО ===
 function showMainMenu() {
     gameState = 'menu';
     if (menuUI) { menuUI.destroy(); menuUI = null; }
     menuUI = this.add.container(600, 400);
-    menuUI.add(this.add.text(0, -250, '🤠 КОВБОЙ И СТАДО 🐄', { fontSize: '56px', fill: '#FFD700', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5));
-    menuUI.add(this.add.text(0, -180, '🏆 Рекорд: ' + highScore, { fontSize: '28px', fill: '#ffffff' }).setOrigin(0.5));
-    menuUI.add(this.add.text(0, -140, '🐄 Всего спасено: ' + totalCowsEverSaved, { fontSize: '24px', fill: '#aaffaa' }).setOrigin(0.5));
-    menuUI.add(this.add.text(0, -110, '✨ Золотых: ' + totalGoldenCowsEver, { fontSize: '24px', fill: '#FFD700' }).setOrigin(0.5));
     
-    let playBtn = this.add.rectangle(0, 0, 250, 70, 0x228B22, 0.9);
+    // Заголовок
+    menuUI.add(this.add.text(0, -320, '🤠 КОВБОЙ И СТАДО 🐄', { 
+        fontSize: '52px', fill: '#FFD700', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 
+    }).setOrigin(0.5));
+    
+    // Рекорд и статистика
+    menuUI.add(this.add.text(0, -260, '🏆 Рекорд: ' + highScore, { fontSize: '24px', fill: '#ffffff' }).setOrigin(0.5));
+    menuUI.add(this.add.text(0, -235, '🐄 Всего спасено: ' + totalCowsEverSaved + ' | ✨ Золотых: ' + totalGoldenCowsEver, { fontSize: '18px', fill: '#aaffaa' }).setOrigin(0.5));
+    
+    // Описание игры
+    let descText = 
+        '🎮 Выживание с бесконечным миром!\n' +
+        'Вы — ковбой на лошади. Собирайте коров в стадо,\n' +
+        'защищайте их от волков и выживайте как можно дольше!\n\n' +
+        '🐄 Коровы → тратьте на скиллы (⚡скорострельность, 🐕собака, 💥взрыв)\n' +
+        '📦 Ящики с оружием появляются на поле (дробовик, автомат, пулемёт)\n' +
+        '🐺 Каждую минуту появляется босс-волк — берегитесь!\n' +
+        '🐂 Быки: злые атакуют всех, но можно направить на врагов\n' +
+        '✨ 3 золотые коровы = дополнительная жизнь';
+    
+    menuUI.add(this.add.text(0, -130, descText, { 
+        fontSize: '16px', fill: '#dddddd', align: 'center', lineSpacing: 4
+    }).setOrigin(0.5));
+    
+    // Управление
+    let controlText = 
+        '🎯 УПРАВЛЕНИЕ:\n' +
+        '🏃 Движение: WASD или стрелки ← ↑ → ↓\n' +
+        '🎯 Прицеливание: курсор мыши\n' +
+        '🖱️ Стрельба: автоматическая\n' +
+        '⚡ Скиллы: клик по кнопкам справа';
+    
+    menuUI.add(this.add.text(0, 60, controlText, { 
+        fontSize: '16px', fill: '#88ccff', align: 'center', lineSpacing: 6
+    }).setOrigin(0.5));
+    
+    // Кнопка ИГРАТЬ
+    let playBtn = this.add.rectangle(0, 200, 250, 70, 0x228B22, 0.9);
     playBtn.setStrokeStyle(4, 0x00FF00);
     menuUI.add(playBtn);
-    menuUI.add(this.add.text(0, 0, '▶ ИГРАТЬ', { fontSize: '32px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5));
+    menuUI.add(this.add.text(0, 200, '▶ ИГРАТЬ', { fontSize: '32px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5));
     playBtn.setInteractive();
     playBtn.on('pointerover', () => playBtn.setFillStyle(0x32CD32));
     playBtn.on('pointerout', () => playBtn.setFillStyle(0x228B22));
     playBtn.on('pointerdown', () => startGame.call(this));
-    
-    menuUI.add(this.add.text(0, 150, 'Собирай коров и защищай стадо от волков!\nЛови золотых коров ✨ для бонусов!', { fontSize: '18px', fill: '#aaaaaa', align: 'center' }).setOrigin(0.5));
 }
 
 function createHorse() {
@@ -178,6 +218,7 @@ function startGame() {
     wolvesKilled = 0; bullsKilled = 0;
     bulls = []; bloodStains = []; dustParticles = [];
     lastDustTime = 0;
+    lastMoveTime = 0; isMoving = false;
     
     achievements = {
         firstBlood: false, shepherd: false, godOfWar: false,
@@ -315,7 +356,7 @@ function killBull(bull, byBoss = false) {
     
     let flash = this.add.circle(bx, by, 20, 0xFF8800, 0.8);
     this.tweens.add({ targets: flash, alpha: 0, scale: 3, duration: 400, onComplete: () => flash.destroy() });
-    let txt = this.add.text(bx, by - 30, '+50 ', { fontSize: '24px', fill: '#FFD700', fontStyle: 'bold' }).setOrigin(0.5);
+    let txt = this.add.text(bx, by - 30, '+50 🐂', { fontSize: '24px', fill: '#FFD700', fontStyle: 'bold' }).setOrigin(0.5);
     this.tweens.add({ targets: txt, y: by - 80, alpha: 0, duration: 1000, onComplete: () => txt.destroy() });
 }
 
@@ -361,6 +402,11 @@ function updateDustParticles() {
 }
 
 function createBloodStain(x, y) {
+    // Ограничение количества пятен крови
+    while (bloodStains.length >= MAX_BLOOD_STAINS) {
+        let old = bloodStains.shift();
+        if (old && old.active) old.destroy();
+    }
     let stain = this.add.graphics();
     stain.fillStyle(0x660000, 0.7);
     stain.fillEllipse(0, 0, Phaser.Math.Between(20, 35), Phaser.Math.Between(15, 25));
@@ -387,6 +433,8 @@ function updateBloodStains() {
 
 function spawnGrassPatch() {
     if (gameState !== 'playing') return;
+    // Оптимизация: не спавним если игрок стоит и много декораций
+    if (!isMoving && bgDecorations.getChildren().length >= MAX_DECORATIONS) return;
     let pos = randomMapPos(600, 1200);
     let patch = this.add.graphics();
     let w = Phaser.Math.Between(150, 300), h = Phaser.Math.Between(80, 150);
@@ -401,6 +449,7 @@ function spawnGrassPatch() {
 
 function spawnBgHill() {
     if (gameState !== 'playing') return;
+    if (!isMoving && bgDecorations.getChildren().length >= MAX_DECORATIONS) return;
     let pos = randomMapPos(700, 1300);
     let hill = this.add.graphics();
     let w = Phaser.Math.Between(120, 250), h = Phaser.Math.Between(60, 120);
@@ -415,6 +464,8 @@ function spawnBgHill() {
 
 function spawnBgDecoration() {
     if (gameState !== 'playing') return;
+    // Оптимизация: не спавним если игрок стоит и много декораций
+    if (!isMoving && bgDecorations.getChildren().length >= MAX_DECORATIONS) return;
     let pos = randomMapPos(500, 1100);
     let t = Phaser.Math.Between(0, 9);
     let deco = this.add.graphics();
@@ -478,6 +529,7 @@ function spawnBgDecoration() {
 
 function spawnObstacle() {
     if (gameState !== 'playing') return;
+    if (!isMoving && bgDecorations.getChildren().length >= MAX_DECORATIONS) return;
     let pos = randomMapPos(500, 900);
     let g = this.add.graphics();
     g.fillStyle(0x3D5A20, 0.4); g.fillEllipse(5, 10, 50, 20);
@@ -570,7 +622,7 @@ function collectGoldenCow(h, cow) {
 }
 
 function showAchievement(text) {
-    let t = this.add.text(600, 250, ' ' + text, { fontSize: '36px', fill: '#FFD700', fontStyle: 'bold', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setScrollFactor(0);
+    let t = this.add.text(600, 250, '🏆 ' + text, { fontSize: '36px', fill: '#FFD700', fontStyle: 'bold', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setScrollFactor(0);
     this.tweens.add({ targets: t, y: 150, alpha: 0, scale: 1.3, duration: 2500, onComplete: () => t.destroy() });
 }
 
@@ -699,6 +751,13 @@ function triggerExplosion() {
 }
 
 function createWolfSkeleton(x, y, isBoss, angle) {
+    // Ограничение количества скелетов
+    let skeletons = wolfSkeletons.getChildren();
+    while (skeletons.length >= MAX_SKELETONS) {
+        let old = skeletons.shift();
+        if (old && old.active) old.destroy();
+    }
+    
     let skeleton = this.add.graphics();
     if (isBoss) {
         skeleton.lineStyle(3, 0xDDDDDD, 0.8);
@@ -776,16 +835,17 @@ function updateBossHPBar() {
     this.bossHPBar.fillRect(x, y, barWidth * hpRatio, barHeight);
     this.bossHPBar.lineStyle(3, 0xFFFFFF, 1);
     this.bossHPBar.strokeRect(x, y, barWidth, barHeight);
-    this.bossHPText.setText(' БОСС: ' + Math.max(0, Math.ceil(boss.hp)) + ' / 200');
+    this.bossHPText.setText('🐺 БОСС: ' + Math.max(0, Math.ceil(boss.hp)) + ' / 200');
 }
 
 function update() {
     if (gameState !== 'playing') return;
 
-    if (gameTime - lastDifficultyIncrease >= 120) {
+    // === УСКОРЕНИЕ ГЕНЕРАЦИИ ВОЛКОВ КАЖДУЮ МИНУТУ ===
+    if (gameTime - lastDifficultyIncrease >= 60) {
         lastDifficultyIncrease = gameTime;
-        wolfSpawnRate = Math.max(100, wolfSpawnRate - 150);
-        powerUpSpawnRate = Math.max(5000, powerUpSpawnRate - 3000);
+        wolfSpawnRate = Math.max(100, wolfSpawnRate - 100);
+        powerUpSpawnRate = Math.max(5000, powerUpSpawnRate - 2000);
     }
 
     if (!bossActive && gameTime - lastBossSpawn >= 60) {
@@ -800,10 +860,13 @@ function update() {
     if (this.cursors.down.isDown || this.keys.S.isDown) moveY += 1;
     if (moveX !== 0 && moveY !== 0) { moveX *= 0.707; moveY *= 0.707; }
     
+    // === ОТСЛЕЖИВАНИЕ ДВИЖЕНИЯ ДЛЯ ОПТИМИЗАЦИИ ===
+    isMoving = (moveX !== 0 || moveY !== 0);
+    if (isMoving) lastMoveTime = gameTime;
+    
     horse.body.setVelocityX(moveX * baseHorseSpeed);
     horse.body.setVelocityY(moveY * baseHorseSpeed);
 
-    let isMoving = (moveX !== 0 || moveY !== 0);
     if (isMoving) {
         let ta = Phaser.Math.RadToDeg(Math.atan2(moveY, moveX)) + 90;
         let diff = ta - horse.angle;
@@ -853,6 +916,7 @@ function update() {
         }
     });
 
+    // === СОБАКА-КОМПАНЬОН (ИСПРАВЛЕНО: 50 урона боссу, многократные атаки) ===
     if (dogCompanion) {
         dogCompanion.attackTimer += 1 / 60;
         let closest = null, minD = 450;
@@ -865,9 +929,19 @@ function update() {
             let d2 = targetAngle - dogCompanion.angle;
             while (d2 > 180) d2 -= 360; while (d2 < -180) d2 += 360;
             dogCompanion.angle += d2 * 0.25;
-            if (dist < 40) {
-                if (closest.isBoss) { closest.hp -= 70; if (closest.hp <= 0) killBoss.call(this, closest); }
-                else { let angle = closest.angle; closest.destroy(); score += 10; createWolfSkeleton.call(this, closest.x, closest.y, false, angle); createBloodStain.call(this, closest.x, closest.y); }
+            
+            if (dist < 40 && dogCompanion.attackTimer >= 0.6) {
+                dogCompanion.attackTimer = 0; // Сбрасываем таймер — можно кусать снова!
+                if (closest.isBoss) { 
+                    closest.hp -= 50; // 50 урона за укус (было 70)
+                    let dmgText = this.add.text(closest.x, closest.y - 40, '-50', { fontSize: '24px', fill: '#FF8800', fontStyle: 'bold' }).setOrigin(0.5);
+                    this.tweens.add({ targets: dmgText, y: closest.y - 80, alpha: 0, duration: 600, onComplete: () => dmgText.destroy() });
+                    if (closest.hp <= 0) killBoss.call(this, closest); 
+                } else { 
+                    let angle = closest.angle; closest.destroy(); score += 10; 
+                    createWolfSkeleton.call(this, closest.x, closest.y, false, angle); 
+                    createBloodStain.call(this, closest.x, closest.y); 
+                }
                 let f = this.add.circle(closest.x, closest.y, 15, 0xFFD700, 0.9);
                 this.tweens.add({ targets: f, alpha: 0, scale: 4, duration: 300, onComplete: () => f.destroy() });
             }
@@ -896,7 +970,6 @@ function update() {
             let minDist = Phaser.Math.Distance.Between(bull.x, bull.y, horse.x, horse.y);
             let targetType = 'horse';
             
-            // Ищем ближайшую цель: босс, волк или игрок
             enemies.children.iterate(e => {
                 if (e) {
                     let d = Phaser.Math.Distance.Between(bull.x, bull.y, e.x, e.y);
@@ -921,13 +994,11 @@ function update() {
                 bull.angle += d * 0.2;
             }
             
-            // Атака босса-волка (смертельный удар!)
             if (targetType === 'boss' && dist < 40 && bull.attackTimer > 0.5) {
                 bull.attackTimer = 0;
                 enemies.children.iterate(e => {
                     if (e && e.isBoss && Phaser.Math.Distance.Between(bull.x, bull.y, e.x, e.y) < 40) {
                         e.hp -= 50;
-                        // БЫК УМИРАЕТ ПОСЛЕ АТАКИ НА БОССА
                         killBull.call(this, bull, true);
                         if (e.hp <= 0) killBoss.call(this, e);
                         let flash = this.add.circle(e.x, e.y, 30, 0xFF0000, 0.8);
@@ -936,17 +1007,13 @@ function update() {
                         this.tweens.add({ targets: dmgText, y: e.y - 80, alpha: 0, duration: 800, onComplete: () => dmgText.destroy() });
                     }
                 });
-            }
-            // Атака игрока
-            else if (targetType === 'horse' && Phaser.Math.Distance.Between(bull.x, bull.y, horse.x, horse.y) < 35 && bull.attackTimer > 0.8) {
+            } else if (targetType === 'horse' && Phaser.Math.Distance.Between(bull.x, bull.y, horse.x, horse.y) < 35 && bull.attackTimer > 0.8) {
                 bull.attackTimer = 0;
                 loseHP.call(this);
                 this.cameras.main.shake(200, 0.03);
                 let f = this.add.circle(horse.x, horse.y, 20, 0xFF4400, 0.8);
                 this.tweens.add({ targets: f, alpha: 0, scale: 2, duration: 300, onComplete: () => f.destroy() });
-            }
-            // Атака обычных волков
-            else if (targetType === 'wolf') {
+            } else if (targetType === 'wolf') {
                 enemies.children.iterate(e => {
                     if (e && !e.isBoss && Phaser.Math.Distance.Between(bull.x, bull.y, e.x, e.y) < 35) {
                         let ex = e.x, ey = e.y;
@@ -1032,6 +1099,16 @@ function update() {
         let d = targetAngle - cow.angle;
         while (d > 180) d -= 360; while (d < -180) d += 360;
         cow.angle += d * 0.1;
+    }
+
+    // === ОПТИМИЗАЦИЯ: ограничиваем количество врагов ===
+    if (enemies.getChildren().length > MAX_ENEMIES) {
+        let toRemove = enemies.getChildren().length - MAX_ENEMIES;
+        let children = enemies.getChildren();
+        for (let i = 0; i < toRemove && i < children.length; i++) {
+            let old = children[i];
+            if (old && !old.isBoss) { old.destroy(); }
+        }
     }
 
     enemies.children.iterate(enemy => {
@@ -1204,7 +1281,7 @@ function spawnBoss() {
     bossActive = true;
     this.cameras.main.shake(500, 0.04);
     createBossDarkness.call(this);
-    let bt = this.add.text(600, 400, ' БОСС-ВОЛК! 🐺', { fontSize: '72px', fill: '#ff0000', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setScrollFactor(0);
+    let bt = this.add.text(600, 400, '🐺 БОСС-ВОЛК! 🐺', { fontSize: '72px', fill: '#ff0000', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setScrollFactor(0);
     this.tweens.add({ targets: bt, alpha: 0, scale: 2, duration: 3000, onComplete: () => bt.destroy() });
     let pos = randomMapPos(350, 450);
     let boss = this.add.container(pos.x, pos.y, [
@@ -1332,17 +1409,17 @@ function gameOver() {
     goUI.add(this.add.text(0, -185, '🐄 Спасено: ' + totalCowsCollected + ' | ✨ Золотых: ' + goldenCowsCollected, { fontSize: '22px', fill: '#aaffaa' }).setOrigin(0.5));
     goUI.add(this.add.text(0, -155, '🐺 Волков: ' + wolvesKilled + ' | 🐂 Быков: ' + bullsKilled, { fontSize: '20px', fill: '#ffaaaa' }).setOrigin(0.5));
     
-    goUI.add(this.add.text(0, -115, ' ДОСТИЖЕНИЯ', { fontSize: '26px', fill: '#FFD700', fontStyle: 'bold' }).setOrigin(0.5));
+    goUI.add(this.add.text(0, -115, '🏆 ДОСТИЖЕНИЯ', { fontSize: '26px', fill: '#FFD700', fontStyle: 'bold' }).setOrigin(0.5));
     
     let achievementList = [
         { name: '🗡️ Первая кровь (10 волков)', unlocked: achievements.firstBlood },
         { name: '🐕 Пастух (20 коров)', unlocked: achievements.shepherd },
-        { name: '️ God of War (босс)', unlocked: achievements.godOfWar },
-        { name: ' Выживший (10 минут)', unlocked: achievements.survivor },
+        { name: '⚔️ God of War (босс)', unlocked: achievements.godOfWar },
+        { name: '⏰ Выживший (10 минут)', unlocked: achievements.survivor },
         { name: '✨ Золотая лихорадка', unlocked: achievements.goldenFever },
         { name: '🏹 Охотник (100 волков)', unlocked: achievements.hunter },
         { name: '👑 Легенда (1000 волков)', unlocked: achievements.legend },
-        { name: ' Тореадор (3 быка)', unlocked: achievements.bullfighter }
+        { name: '🐂 Тореадор (3 быка)', unlocked: achievements.bullfighter }
     ];
     
     let yPos = -80;
@@ -1376,7 +1453,7 @@ function gameOver() {
         let shareText = '🤠 КОВБОЙ И СТАДО 🐄\n' +
             '━━━━━━━━━━━━━━\n' +
             '🏆 Счёт: ' + score + '\n' +
-            '️ Время: ' + timeStr + '\n' +
+            '⏱️ Время: ' + timeStr + '\n' +
             '🐄 Спасено коров: ' + totalCowsCollected + '\n' +
             '✨ Золотых коров: ' + goldenCowsCollected + '\n' +
             '🐺 Волков убито: ' + wolvesKilled + '\n' +
