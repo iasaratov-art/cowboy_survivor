@@ -87,11 +87,11 @@ function showMainMenu() {
     
     // Заголовок
     menuUI.add(this.add.text(0, -320, '🤠 КОВБОЙ И СТАДО 🐄', { 
-        fontSize: '52px', fill: '#FFD700', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 
+        fontSize: '48px', fill: 'rgba(230, 140, 6, 0.84)', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 
     }).setOrigin(0.5));
     
     // Рекорд и статистика
-    menuUI.add(this.add.text(0, -260, '🏆 Рекорд: ' + highScore, { fontSize: '24px', fill: '#ffffff' }).setOrigin(0.5));
+    menuUI.add(this.add.text(0, -260, '🏆 Рекорд: ' + highScore, { fontSize: '24px', fill: '#000' }).setOrigin(0.5));
     menuUI.add(this.add.text(0, -235, '🐄 Всего спасено: ' + totalCowsEverSaved + ' | ✨ Золотых: ' + totalGoldenCowsEver, { fontSize: '18px', fill: '#aaffaa' }).setOrigin(0.5));
     
     // Описание игры
@@ -106,7 +106,7 @@ function showMainMenu() {
         '✨ 3 золотые коровы = дополнительная жизнь';
     
     menuUI.add(this.add.text(0, -130, descText, { 
-        fontSize: '16px', fill: '#dddddd', align: 'center', lineSpacing: 4
+        fontSize: '16px', fill: '#000', align: 'center', lineSpacing: 4
     }).setOrigin(0.5));
     
     // Управление
@@ -118,14 +118,14 @@ function showMainMenu() {
         '⚡ Скиллы: клик по кнопкам справа';
     
     menuUI.add(this.add.text(0, 60, controlText, { 
-        fontSize: '16px', fill: '#88ccff', align: 'center', lineSpacing: 6
+        fontSize: '16px', fill: '#000', align: 'center', lineSpacing: 6
     }).setOrigin(0.5));
     
     // Кнопка ИГРАТЬ
     let playBtn = this.add.rectangle(0, 200, 250, 70, 0x228B22, 0.9);
     playBtn.setStrokeStyle(4, 0x00FF00);
     menuUI.add(playBtn);
-    menuUI.add(this.add.text(0, 200, '▶ ИГРАТЬ', { fontSize: '32px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5));
+    menuUI.add(this.add.text(0, 200, '▶ ИГРАТЬ', { fontSize: '32px', fill: '#000', fontStyle: 'bold' }).setOrigin(0.5));
     playBtn.setInteractive();
     playBtn.on('pointerover', () => playBtn.setFillStyle(0x32CD32));
     playBtn.on('pointerout', () => playBtn.setFillStyle(0x228B22));
