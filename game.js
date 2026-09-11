@@ -25,6 +25,7 @@ let skillButtons = [], activeSkills = {};
 let menuUI = null, gameUI = null, bossDarkOverlay = null;
 let wolfSpawnRate = 800, powerUpSpawnRate = 25000;
 let lastDifficultyIncrease = 0, lastPowerUpSpawn = 0;
+let lastEnemySpawnTime = 0; // Добавлено для динамического спавна
 
 let achievements = {
     firstBlood: false, shepherd: false, godOfWar: false,
@@ -255,6 +256,7 @@ function startGame() {
     bossDarkOverlay = null;
     wolfSpawnRate = 800; powerUpSpawnRate = 25000;
     lastDifficultyIncrease = 0; lastPowerUpSpawn = 0;
+    lastEnemySpawnTime = this.time.now; // Инициализация времени спавна
     horseHP = 3;
     wolvesKilled = 0; bullsKilled = 0;
     bulls = []; bloodStains = []; dustParticles = []; tumbleweeds = [];
@@ -291,7 +293,7 @@ function startGame() {
     }, this);
     
     this.time.addEvent({ delay: 1000, callback: spawnObstacle, callbackScope: this, loop: true });
-    this.time.addEvent({ delay: 800, callback: spawnEnemy, callbackScope: this, loop: true });
+    // УДАЛЕНО: this.time.addEvent({ delay: 800, callback: spawnEnemy, callbackScope: this, loop: true });
     this.time.addEvent({ delay: 150, callback: spawnBgDecoration, callbackScope: this, loop: true });
     this.time.addEvent({ delay: 2000, callback: spawnBgHill, callbackScope: this, loop: true });
     this.time.addEvent({ delay: 2500, callback: spawnGrassPatch, callbackScope: this, loop: true });
@@ -893,11 +895,20 @@ function update() {
         crosshair.x = mouseX;
         crosshair.y = mouseY;
     }
+    
+    // Прогрессия сложности
     if (gameTime - lastDifficultyIncrease >= 60) { 
         lastDifficultyIncrease = gameTime; 
         wolfSpawnRate = Math.max(100, wolfSpawnRate - 100); 
         powerUpSpawnRate = Math.max(5000, powerUpSpawnRate - 2000); 
     }
+    
+    // Динамический спавн врагов с учетом актуального wolfSpawnRate
+    if (this.time.now - lastEnemySpawnTime >= wolfSpawnRate) {
+        lastEnemySpawnTime = this.time.now;
+        spawnEnemy.call(this);
+    }
+    
     if (!bossActive && gameTime - lastBossSpawn >= 60) { 
         lastBossSpawn = gameTime; 
         spawnBoss.call(this); 
