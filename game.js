@@ -36,7 +36,7 @@ let bullsKilled = 0;
 
 const MAP_SIZE = 20000;
 const MAP_HALF = MAP_SIZE / 2;
-const MAP_LIMIT = MAP_HALF - 200;
+const MAP_LIMIT = MAP_HALF - 1;
 
 let bulls = [];
 let bloodStains = [];
@@ -86,7 +86,7 @@ function showMainMenu() {
     gameOverTriggered = false;
     if (menuUI) { menuUI.destroy(); menuUI = null; }
     menuUI = this.add.container(600, 400);
-
+    
     var wallBg = this.add.graphics();
     wallBg.fillStyle(0x4A3228, 1);
     wallBg.fillRect(-550, -380, 1100, 760);
@@ -95,7 +95,7 @@ function showMainMenu() {
     wallBg.lineStyle(1, 0x3A2418, 0.4);
     for (var i = 0; i < 20; i++) wallBg.lineBetween(-550 + i * 58, -380, -550 + i * 58, 380);
     menuUI.add(wallBg);
-
+    
     var doorL = this.add.graphics();
     doorL.fillStyle(0x6B4423, 1); doorL.fillRect(-530, -100, 160, 500);
     doorL.lineStyle(4, 0x4A2F1A, 1);
@@ -103,7 +103,7 @@ function showMainMenu() {
     doorL.lineBetween(-530, 150, -370, 150); doorL.lineBetween(-530, 250, -370, 250);
     doorL.lineStyle(5, 0x3A1F0F, 1); doorL.strokeRect(-530, -100, 160, 500);
     menuUI.add(doorL);
-
+    
     var doorR = this.add.graphics();
     doorR.fillStyle(0x6B4423, 1); doorR.fillRect(370, -100, 160, 500);
     doorR.lineStyle(4, 0x4A2F1A, 1);
@@ -111,13 +111,13 @@ function showMainMenu() {
     doorR.lineBetween(370, 150, 530, 150); doorR.lineBetween(370, 250, 530, 250);
     doorR.lineStyle(5, 0x3A1F0F, 1); doorR.strokeRect(370, -100, 160, 500);
     menuUI.add(doorR);
-
+    
     var signBg = this.add.graphics();
     signBg.fillStyle(0x8B5A2B, 1); signBg.fillRoundedRect(-320, -360, 640, 100, 8);
     signBg.lineStyle(6, 0x3A1F0F, 1); signBg.strokeRoundedRect(-320, -360, 640, 100, 8);
     signBg.lineStyle(2, 0xFFD700, 0.8); signBg.strokeRoundedRect(-310, -350, 620, 80, 6);
     menuUI.add(signBg);
-
+    
     menuUI.add(this.add.text(0, -310, 'HORNS AND HOOFS', {
         fontSize: '42px', fill: '#FFD700', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6, fontFamily: 'Georgia'
     }).setOrigin(0.5));
@@ -132,7 +132,7 @@ function showMainMenu() {
     menuUI.add(this.add.text(0, -170, 'Спасено: ' + totalCowsEverSaved + '  |  Золотых: ' + totalGoldenCowsEver, {
         fontSize: '16px', fill: '#DDDDDD', stroke: '#000000', strokeThickness: 2
     }).setOrigin(0.5));
-
+    
     var descBg = this.add.graphics();
     descBg.fillStyle(0x6B4423, 0.95); descBg.fillRoundedRect(-350, -130, 700, 180, 10);
     descBg.lineStyle(4, 0x3A1F0F, 1); descBg.strokeRoundedRect(-350, -130, 700, 180, 10);
@@ -141,7 +141,7 @@ function showMainMenu() {
         'Выживание в мире Дикого Запада!\nСобирай коров в стадо → трать на скиллы\nПодбирай ящики с оружием на поле\nКаждую минуту появляется босс-волк\nЗлые быки — направь их на врагов!\n3 золотые коровы = дополнительная жизнь', {
         fontSize: '15px', fill: '#FFE4B5', align: 'center', lineSpacing: 5, stroke: '#000000', strokeThickness: 2
     }).setOrigin(0.5));
-
+    
     var ctrlBg = this.add.graphics();
     ctrlBg.fillStyle(0x6B4423, 0.95); ctrlBg.fillRoundedRect(-280, 70, 560, 90, 10);
     ctrlBg.lineStyle(4, 0x3A1F0F, 1); ctrlBg.strokeRoundedRect(-280, 70, 560, 90, 10);
@@ -150,11 +150,12 @@ function showMainMenu() {
         'УПРАВЛЕНИЕ\nДвижение: WASD или стрелки\nПрицел: мышь  |  Стрельба: авто  |  Скиллы: клик справа', {
         fontSize: '14px', fill: '#87CEEB', align: 'center', lineSpacing: 4, stroke: '#000000', strokeThickness: 2
     }).setOrigin(0.5));
-
+    
     var playBtnBg = this.add.graphics();
     playBtnBg.fillStyle(0x8B0000, 1); playBtnBg.fillRoundedRect(-140, 190, 280, 70, 8);
     playBtnBg.lineStyle(5, 0xFFD700, 1); playBtnBg.strokeRoundedRect(-140, 190, 280, 70, 8);
     menuUI.add(playBtnBg);
+    
     var playBtn = this.add.rectangle(0, 225, 280, 70, 0x8B0000, 0.01);
     menuUI.add(playBtn);
     menuUI.add(this.add.text(0, 225, '▶ ИГРАТЬ ▶', {
@@ -259,7 +260,7 @@ function startGame() {
     bulls = []; bloodStains = []; dustParticles = []; tumbleweeds = [];
     lastDustTime = 0; lastMoveTime = 0; isMoving = false;
     achievements = { firstBlood: false, shepherd: false, godOfWar: false, survivor: false, goldenFever: false, hunter: false, legend: false, bullfighter: false };
-
+    
     horse = createHorse.call(this);
     this.physics.add.existing(horse);
     horse.body.setCollideWorldBounds(true);
@@ -267,6 +268,7 @@ function startGame() {
     horse.body.setAllowGravity(false);
     cowboy = createCowboy.call(this);
     horse.add(cowboy);
+    
     enemies = this.physics.add.group();
     bullets = this.physics.add.group();
     bgDecorations = this.add.group();
@@ -274,17 +276,20 @@ function startGame() {
     cowsToCollect = this.physics.add.group();
     goldenCows = this.physics.add.group();
     powerUps = this.physics.add.group();
+    
     this.physics.add.overlap(horse, enemies, hitEnemy, null, this);
     this.physics.add.overlap(bullets, enemies, hitBulletEnemy, null, this);
     this.physics.add.overlap(horse, cowsToCollect, collectCow, null, this);
     this.physics.add.overlap(horse, goldenCows, collectGoldenCow, null, this);
     this.physics.add.overlap(horse, powerUps, collectPowerUp, null, this);
+    
     this.cursors = this.input.keyboard.createCursorKeys();
     this.keys = this.input.keyboard.addKeys('W,S,A,D');
     this.input.on('pointermove', function(p) { mouseX = p.x; mouseY = p.y; });
     this.input.on('pointerdown', function(pointer) {
         if (pointer.leftButtonDown() && gameState === 'playing') checkSkillButtonClick.call(this, pointer);
     }, this);
+    
     this.time.addEvent({ delay: 1000, callback: spawnObstacle, callbackScope: this, loop: true });
     this.time.addEvent({ delay: 800, callback: spawnEnemy, callbackScope: this, loop: true });
     this.time.addEvent({ delay: 150, callback: spawnBgDecoration, callbackScope: this, loop: true });
@@ -293,7 +298,7 @@ function startGame() {
     this.time.addEvent({ delay: 3000, callback: spawnCow, callbackScope: this, loop: true });
     this.time.addEvent({ delay: 45000, callback: spawnGoldenCow, callbackScope: this, loop: true });
     this.time.addEvent({ delay: 30000, callback: spawnBull, callbackScope: this, loop: true });
-    this.time.addEvent({ delay: 5000, callback: spawnTumbleweed, callbackScope: this, loop: true });
+    
     gameUI = this.add.container(0, 0);
     gameUI.setScrollFactor(0);
     this.hpText = this.add.text(10, 10, '', { fontSize: '32px', fill: '#ff0000' });
@@ -315,6 +320,7 @@ function startGame() {
     gameUI.add(this.bossHPBar);
     this.bossHPText = this.add.text(600, 20, '', { fontSize: '18px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
     gameUI.add(this.bossHPText);
+    
     createSkillButtons.call(this);
     createCrosshair.call(this);
     this.cameras.main.setBounds(-MAP_HALF, -MAP_HALF, MAP_SIZE, MAP_SIZE);
@@ -325,36 +331,30 @@ function spawnTumbleweed() {
     if (gameState !== 'playing') return;
     var tw = this.add.graphics();
     var colors = [0x8B6914, 0xA0820A, 0x9B7B0A, 0x7A5F0F];
-    
     for (var i = 0; i < 12; i++) {
         var startAngle = Math.random() * Math.PI * 2;
         var endAngle = startAngle + (Math.random() * 0.8 + 0.3);
         var radius = Math.random() * 12 + 8;
         var color = colors[Math.floor(Math.random() * colors.length)];
-        
         tw.lineStyle(2, color, 0.9);
         tw.beginPath();
         tw.arc(0, 0, radius, startAngle, endAngle, false);
         tw.strokePath();
     }
-    
     for (var i = 0; i < 8; i++) {
         var angle = Math.random() * Math.PI * 2;
         var innerR = Math.random() * 5 + 3;
         var outerR = Math.random() * 8 + 10;
         var color = colors[Math.floor(Math.random() * colors.length)];
-        
         tw.lineStyle(1.5, color, 0.8);
         tw.beginPath();
         tw.moveTo(Math.cos(angle) * innerR, Math.sin(angle) * innerR);
-        
         var midAngle = angle + (Math.random() - 0.5) * 0.5;
         var midR = (innerR + outerR) / 2;
         tw.lineTo(Math.cos(midAngle) * midR, Math.sin(midAngle) * midR);
         tw.lineTo(Math.cos(angle) * outerR, Math.sin(angle) * outerR);
         tw.strokePath();
     }
-    
     var startX = horse.x - 800;
     var startY = horse.y + Phaser.Math.Between(-400, 400);
     tw.setPosition(startX, startY);
@@ -396,6 +396,7 @@ function createBull(x, y) {
 }
 
 function killBull(bull) {
+    if (!bull || !bull.active) return;
     var bx = bull.x, by = bull.y, ang = bull.angle;
     var idx = bulls.indexOf(bull);
     if (idx >= 0) bulls.splice(idx, 1);
@@ -418,31 +419,18 @@ function killBull(bull) {
 }
 
 function hitBull(bull) {
-    bull.hp--; bull.angry = true;
-    
+    if (!bull || !bull.active) return;
+    bull.hp--; 
+    bull.angry = true;
     var impactX = bull.x, impactY = bull.y;
     var flash = this.add.circle(impactX, impactY, 8, 0xFF4400, 0.7);
     this.tweens.add({ targets: flash, alpha: 0, scale: 1.5, duration: 200, onComplete: function() { flash.destroy(); } });
-    
     for (var i = 0; i < 4; i++) {
         var angle = (Math.PI * 2 / 4) * i;
         var dist = Phaser.Math.Between(5, 12);
-        var particle = this.add.circle(
-            impactX + Math.cos(angle) * dist,
-            impactY + Math.sin(angle) * dist,
-            Phaser.Math.Between(1, 3),
-            0xFF6600,
-            0.8
-        );
-        this.tweens.add({
-            targets: particle,
-            alpha: 0,
-            scale: 0.3,
-            duration: 250,
-            onComplete: function() { particle.destroy(); }
-        });
+        var particle = this.add.circle(impactX + Math.cos(angle) * dist, impactY + Math.sin(angle) * dist, Phaser.Math.Between(1, 3), 0xFF6600, 0.8);
+        this.tweens.add({ targets: particle, alpha: 0, scale: 0.3, duration: 250, onComplete: function() { particle.destroy(); } });
     }
-    
     var hp = this.add.text(bull.x, bull.y - 25, bull.hp + '/5', { fontSize: '16px', fill: '#FF4400', fontStyle: 'bold' }).setOrigin(0.5);
     this.tweens.add({ targets: hp, y: bull.y - 50, alpha: 0, duration: 600, onComplete: function() { hp.destroy(); } });
     if (bull.hp <= 0) killBull.call(this, bull);
@@ -469,7 +457,10 @@ function updateDustParticles() {
 }
 
 function createBloodStain(x, y) {
-    while (bloodStains.length >= MAX_BLOOD_STAINS) { var old = bloodStains.shift(); if (old && old.active) old.destroy(); }
+    while (bloodStains.length >= MAX_BLOOD_STAINS) { 
+        var old = bloodStains.shift(); 
+        if (old && old.active) old.destroy(); 
+    }
     var s = this.add.graphics();
     s.fillStyle(0x660000, 0.7);
     s.fillEllipse(0, 0, Phaser.Math.Between(20, 35), Phaser.Math.Between(15, 25));
@@ -549,20 +540,22 @@ function spawnObstacle() {
 
 function createLightningEffect() {
     var self = this;
-    cows.forEach(function(cow, index) {
-        self.time.delayedCall(index * 80, function() {
-            if (!cow || !cow.active) return;
-            var l = self.add.graphics(); l.lineStyle(3, 0x00FFFF, 1);
-            var x = cow.x, y = cow.y; l.beginPath(); l.moveTo(x, y);
-            for (var i = 1; i <= 8; i++) l.lineTo(x + (Math.random() - 0.5) * 40, y - i * 30);
-            l.strokePath();
-            var gl = self.add.circle(cow.x, cow.y, 20, 0x00FFFF, 0.8);
-            self.tweens.add({ targets: [l, gl], alpha: 0, duration: 400, onComplete: function() { l.destroy(); gl.destroy(); } });
-        });
-    });
+    var count = Math.min(cows.length, 20);
+    for (var index = 0; index < count; index++) {
+        var cow = cows[index];
+        if (!cow || !cow.active) return;
+        var l = self.add.graphics(); l.lineStyle(3, 0x00FFFF, 1);
+        var x = cow.x, y = cow.y; l.beginPath(); l.moveTo(x, y);
+        for (var i = 1; i <= 8; i++) l.lineTo(x + (Math.random() - 0.5) * 40, y - i * 30);
+        l.strokePath();
+        var gl = self.add.circle(cow.x, cow.y, 20, 0x00FFFF, 0.8);
+        self.tweens.add({ targets: [l, gl], alpha: 0, duration: 400, onComplete: function() { l.destroy(); gl.destroy(); } });
+    }
     if (cows.length > 0) {
-        var ax = cows.reduce(function(s, c) { return s + c.x; }, 0) / cows.length;
-        var ay = cows.reduce(function(s, c) { return s + c.y; }, 0) / cows.length;
+        var ax = 0, ay = 0;
+        var cnt = Math.min(cows.length, 20);
+        for (var j = 0; j < cnt; j++) { ax += cows[j].x; ay += cows[j].y; }
+        ax /= cnt; ay /= cnt;
         var bf = self.add.circle(ax, ay - 100, 50, 0x00FFFF, 0.6);
         self.tweens.add({ targets: bf, scale: 3, alpha: 0, duration: 600, onComplete: function() { bf.destroy(); } });
         self.cameras.main.shake(300, 0.015);
@@ -585,13 +578,19 @@ function spawnGoldenCow() {
 }
 
 function collectGoldenCow(h, cow) {
-    cow.destroy(); goldenCowsCollected++; totalGoldenCowsEver++;
-    localStorage.setItem('totalGoldenCowsEver', totalGoldenCowsEver); score += 50;
+    if (!cow || !cow.active) return;
+    cow.destroy(); 
+    goldenCowsCollected++; 
+    totalGoldenCowsEver++;
+    localStorage.setItem('totalGoldenCowsEver', totalGoldenCowsEver); 
+    score += 50;
     this.goldenCowText.setText('Золотые: ' + goldenCowsCollected + '/3');
     if (goldenCowsCollected >= 3 && !achievements.goldenFever) { achievements.goldenFever = true; showAchievement.call(this, 'ЗОЛОТАЯ ЛИХОРАДКА!'); }
     if (goldenCowsCollected >= 3) {
-        goldenCowsCollected = 0; this.goldenCowText.setText('Золотые: 0/3');
-        horseHP = Math.min(horseHP + 1, 5); updateHPDisplay.call(this);
+        goldenCowsCollected = 0; 
+        this.goldenCowText.setText('Золотые: 0/3');
+        horseHP = Math.min(horseHP + 1, 5); 
+        updateHPDisplay.call(this);
         var t = this.add.text(600, 300, '+1 ЖИЗНЬ!', { fontSize: '48px', fill: '#FFD700', fontStyle: 'bold', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setScrollFactor(0);
         this.tweens.add({ targets: t, y: 200, alpha: 0, scale: 1.5, duration: 2000, onComplete: function() { t.destroy(); } });
     }
@@ -607,7 +606,7 @@ function showAchievement(text) {
 
 function createSkillButtons() {
     skillButtons = [];
-    var skills = [{ id: 'rapidFire', icon: 'x2', cost: 3, y: 730 }, { id: 'dogCompanion', icon: 'СОБАКА', cost: 6, y: 660 }, { id: 'explosion', icon: 'ВЗРЫВ', cost: 9, y: 590 }];
+    var skills = [{ id: 'dualWield', icon: '🔫🔫', cost: 3, y: 730 }, { id: 'dogCompanion', icon: '🐕', cost: 6, y: 660 }, { id: 'dynamite', icon: '🧨', cost: 9, y: 590 }];
     var self = this;
     skills.forEach(function(s) {
         var btn = self.add.container(1050, s.y);
@@ -649,9 +648,19 @@ function updateSkillButtons() {
 function activateSkill(skillId, cost) {
     removeCowsFromHerd.call(this, cost);
     createLightningEffect.call(this);
-    if (skillId === 'rapidFire') { activeSkills.rapidFire = true; this.time.delayedCall(15000, function() { activeSkills.rapidFire = false; }); showSkillText.call(this, 'x2 СКОРОСТРЕЛЬНОСТЬ 15с!'); }
-    else if (skillId === 'dogCompanion') { spawnDogCompanion.call(this, 10000); showSkillText.call(this, 'СОБАКА-ОХОТНИК!'); }
-    else if (skillId === 'explosion') { triggerExplosion.call(this); showSkillText.call(this, 'ВЗРЫВ 500px!'); }
+    if (skillId === 'dualWield') { 
+        activeSkills.dualWield = true; 
+        this.time.delayedCall(20000, function() { activeSkills.dualWield = false; }); 
+        showSkillText.call(this, '🔫🔫 ДВА СТВОЛА 20с!'); 
+    }
+    else if (skillId === 'dogCompanion') { 
+        spawnDogCompanion.call(this, 10000); 
+        showSkillText.call(this, '🐕 СОБАКА-ОХОТНИК!'); 
+    }
+    else if (skillId === 'dynamite') { 
+        startDynamiteSkill.call(this); 
+        showSkillText.call(this, '🧨 ДИНАМИТ 10с!'); 
+    }
 }
 
 function removeCowsFromHerd(count) {
@@ -683,17 +692,118 @@ function spawnDogCompanion(duration) {
     this.time.delayedCall(duration, function() { if (dogCompanion) { dogCompanion.destroy(); dogCompanion = null; } });
 }
 
+function startDynamiteSkill() {
+    activeSkills.dynamite = true;
+    var self = this;
+    var dynamitesThrown = 0;
+    var throwInterval = this.time.addEvent({
+        delay: 1000,
+        callback: function() {
+            if (dynamitesThrown >= 10 || !activeSkills.dynamite) {
+                throwInterval.destroy();
+                activeSkills.dynamite = false;
+                return;
+            }
+            spawnDynamite.call(self);
+            dynamitesThrown++;
+        },
+        callbackScope: this,
+        loop: true
+    });
+}
+
+function spawnDynamite() {
+    var horseAngleRad = Phaser.Math.DegToRad(cowboy.angle);
+    var rearAngle = horseAngleRad + Math.PI;
+    var spread = (Math.random() - 0.5) * (60 * Math.PI / 180);
+    var throwAngle = rearAngle + spread;
+    var distance = Phaser.Math.Between(60, 150);
+    
+    var targetX = horse.x + Math.cos(throwAngle) * distance;
+    var targetY = horse.y + Math.sin(throwAngle) * distance;
+    
+    var dynamite = this.add.graphics();
+    dynamite.fillStyle(0xCC0000, 1);
+    dynamite.fillRect(-6, -12, 12, 24);
+    dynamite.fillStyle(0xFFAA00, 1);
+    dynamite.fillRect(-4, -14, 8, 4);
+    dynamite.lineStyle(2, 0xFF6600, 1);
+    dynamite.lineBetween(0, -14, 0, -20);
+    dynamite.fillStyle(0xFFFF00, 1);
+    dynamite.fillCircle(0, -20, 3);
+    dynamite.setPosition(horse.x, horse.y);
+    
+    this.tweens.add({
+        targets: dynamite,
+        x: targetX,
+        y: targetY,
+        duration: 300,
+        onComplete: () => {
+            explodeDynamite.call(this, targetX, targetY);
+            dynamite.destroy();
+        }
+    });
+}
+
+function explodeDynamite(x, y) {
+    var explosion = this.add.circle(x, y, 50, 0xFF6600, 0.8);
+    this.tweens.add({ targets: explosion, radius: 500, alpha: 0, duration: 600, onComplete: function() { explosion.destroy(); } });
+    
+    for (var i = 0; i < 5; i++) {
+        var smokeX = x + Phaser.Math.Between(-50, 50);
+        var smokeY = y + Phaser.Math.Between(-50, 50);
+        var smoke = this.add.circle(smokeX, smokeY, Phaser.Math.Between(20, 40), 0x666666, 0.6);
+        this.tweens.add({
+            targets: smoke,
+            alpha: 0,
+            scale: 1.5,
+            y: smokeY - 50,
+            duration: 800,
+            onComplete: function() { smoke.destroy(); }
+        });
+    }
+    
+    this.cameras.main.shake(300, 0.03);
+    
+    var self = this;
+    enemies.children.iterate(function(e) {
+        if (e && e.active && Phaser.Math.Distance.Between(x, y, e.x, e.y) < 400) {
+            if (e.isBoss) { 
+                e.hp -= 50; 
+                if (e.hp <= 0) killBoss.call(self, e); 
+            } else { 
+                var ex = e.x, ey = e.y, ang = e.angle; 
+                e.destroy(); 
+                score += 10; 
+                wolvesKilled++; 
+                createWolfSkeleton.call(self, ex, ey, false, ang); 
+                createBloodStain.call(self, ex, ey); 
+            }
+        }
+    });
+}
+
 function triggerExplosion() {
     var self = this;
     enemies.children.iterate(function(e) {
-        if (e && Phaser.Math.Distance.Between(horse.x, horse.y, e.x, e.y) < 500) {
-            if (e.isBoss) { e.hp -= 20; if (e.hp <= 0) killBoss.call(self, e); }
-            else { var ex = e.x, ey = e.y, ang = e.angle; e.destroy(); score += 10; createWolfSkeleton.call(self, ex, ey, false, ang); createBloodStain.call(self, ex, ey); }
+        if (e && e.active && Phaser.Math.Distance.Between(horse.x, horse.y, e.x, e.y) < 500) {
+            if (e.isBoss) { 
+                e.hp -= 20; 
+                if (e.hp <= 0) killBoss.call(self, e); 
+            } else { 
+                var ex = e.x, ey = e.y, ang = e.angle; 
+                e.destroy(); 
+                score += 10; 
+                wolvesKilled++; 
+                createWolfSkeleton.call(self, ex, ey, false, ang); 
+                createBloodStain.call(self, ex, ey); 
+            }
         }
     });
     for (var i = bulls.length - 1; i >= 0; i--) {
-        if (bulls[i] && Phaser.Math.Distance.Between(horse.x, horse.y, bulls[i].x, bulls[i].y) < 500) {
-            bulls[i].hp -= 3; bulls[i].angry = true;
+        if (bulls[i] && bulls[i].active && Phaser.Math.Distance.Between(horse.x, horse.y, bulls[i].x, bulls[i].y) < 500) {
+            bulls[i].hp -= 3; 
+            bulls[i].angry = true;
             if (bulls[i].hp <= 0) killBull.call(this, bulls[i]);
         }
     }
@@ -704,7 +814,10 @@ function triggerExplosion() {
 
 function createWolfSkeleton(x, y, isBoss, angle) {
     var sks = wolfSkeletons.getChildren();
-    while (sks.length >= MAX_SKELETONS) { var old = sks.shift(); if (old && old.active) old.destroy(); }
+    while (sks.length >= MAX_SKELETONS) { 
+        var old = sks.shift(); 
+        if (old && old.active) old.destroy(); 
+    }
     var sk = this.add.graphics();
     if (isBoss) {
         sk.lineStyle(3, 0xDDDDDD, 0.8); sk.strokeCircle(0, -50, 18);
@@ -722,13 +835,18 @@ function createWolfSkeleton(x, y, isBoss, angle) {
         sk.lineBetween(-5, 18, -7, 32); sk.lineBetween(5, 18, 7, 32);
     }
     sk.angle = angle || 0;
-    var c = this.add.container(x, y, [sk]); c.alpha = 0.6; wolfSkeletons.add(c);
+    var c = this.add.container(x, y, [sk]); 
+    c.alpha = 0.6; 
+    wolfSkeletons.add(c);
     this.tweens.add({ targets: c, alpha: 0, duration: isBoss ? 10000 : 5000, onComplete: function() { c.destroy(); } });
 }
 
 function killBoss(boss) {
+    if (!boss || !boss.active) return;
     var bx = boss.x, by = boss.y, ang = boss.angle;
-    boss.destroy(); bossActive = false; score += 500;
+    boss.destroy(); 
+    bossActive = false; 
+    score += 500;
     createWolfSkeleton.call(this, bx, by, true, ang);
     createBloodStain.call(this, bx, by);
     if (!achievements.godOfWar) { achievements.godOfWar = true; showAchievement.call(this, 'GOD OF WAR!'); }
@@ -748,13 +866,15 @@ function createBossDarkness() {
 
 function removeBossDarkness() {
     if (bossDarkOverlay && bossDarkOverlay.active) {
-        var ov = bossDarkOverlay; bossDarkOverlay = null;
+        var ov = bossDarkOverlay; 
+        bossDarkOverlay = null;
         this.tweens.add({ targets: ov, alpha: 0, duration: 1500, ease: 'Sine.easeOut', onComplete: function() { if (ov && ov.active) ov.destroy(); } });
     }
 }
 
 function updateBossHPBar() {
-    this.bossHPBar.clear(); this.bossHPText.setText('');
+    this.bossHPBar.clear(); 
+    this.bossHPText.setText('');
     if (!bossActive) return;
     var boss = null;
     enemies.children.iterate(function(e) { if (e && e.isBoss) boss = e; });
@@ -769,166 +889,385 @@ function updateBossHPBar() {
 function update() {
     if (gameState !== 'playing') return;
     
-    // Обновление прицела
     if (crosshair) {
         crosshair.x = mouseX;
         crosshair.y = mouseY;
     }
+    if (gameTime - lastDifficultyIncrease >= 60) { 
+        lastDifficultyIncrease = gameTime; 
+        wolfSpawnRate = Math.max(100, wolfSpawnRate - 100); 
+        powerUpSpawnRate = Math.max(5000, powerUpSpawnRate - 2000); 
+    }
+    if (!bossActive && gameTime - lastBossSpawn >= 60) { 
+        lastBossSpawn = gameTime; 
+        spawnBoss.call(this); 
+    }
     
-    if (gameTime - lastDifficultyIncrease >= 60) { lastDifficultyIncrease = gameTime; wolfSpawnRate = Math.max(100, wolfSpawnRate - 100); powerUpSpawnRate = Math.max(5000, powerUpSpawnRate - 2000); }
-    if (!bossActive && gameTime - lastBossSpawn >= 60) { lastBossSpawn = gameTime; spawnBoss.call(this); }
     var mx = 0, my = 0;
     if (this.cursors.left.isDown || this.keys.A.isDown) mx -= 1;
     if (this.cursors.right.isDown || this.keys.D.isDown) mx += 1;
     if (this.cursors.up.isDown || this.keys.W.isDown) my -= 1;
     if (this.cursors.down.isDown || this.keys.S.isDown) my += 1;
     if (mx !== 0 && my !== 0) { mx *= 0.707; my *= 0.707; }
+    
     isMoving = (mx !== 0 || my !== 0);
     if (isMoving) lastMoveTime = gameTime;
     horse.body.setVelocityX(mx * baseHorseSpeed); horse.body.setVelocityY(my * baseHorseSpeed);
+    
     if (isMoving) {
         var ta = Phaser.Math.RadToDeg(Math.atan2(my, mx)) + 90;
-        var df = ta - horse.angle; while (df > 180) df -= 360; while (df < -180) df += 360;
+        var df = ta - horse.angle; 
+        while (df > 180) df -= 360; 
+        while (df < -180) df += 360;
         horse.angle += df * 0.15;
-        if (gameTime - lastDustTime > 0.1) { spawnDustParticle.call(this); lastDustTime = gameTime; }
+        if (gameTime - lastDustTime > 0.1) { 
+            spawnDustParticle.call(this); 
+            lastDustTime = gameTime; 
+        }
     }
     updateDustParticles.call(this);
     updateTumbleweeds.call(this);
     
     var wmx = mouseX + this.cameras.main.scrollX, wmy = mouseY + this.cameras.main.scrollY;
     var ta2 = Phaser.Math.RadToDeg(Phaser.Math.Angle.Between(horse.x, horse.y, wmx, wmy)) + 90;
-    var df2 = ta2 - cowboy.angle; while (df2 > 180) df2 -= 360; while (df2 < -180) df2 += 360;
+    var df2 = ta2 - cowboy.angle; 
+    while (df2 > 180) df2 -= 360; 
+    while (df2 < -180) df2 += 360;
     cowboy.angle += df2 * 0.3;
+    
     gameTime += 1 / 60;
     var mins = Math.floor(gameTime / 60), secs = Math.floor(gameTime % 60);
     this.timeText.setText('Время: ' + mins + ':' + (secs < 10 ? '0' : '') + secs);
-    if (gameTime >= 600 && !achievements.survivor) { achievements.survivor = true; showAchievement.call(this, 'ВЫЖИВШИЙ!'); }
-    if (gameTime - lastPowerUpSpawn >= powerUpSpawnRate / 1000) { lastPowerUpSpawn = gameTime; spawnPowerUp.call(this); }
+    
+    if (gameTime >= 600 && !achievements.survivor) { 
+        achievements.survivor = true; 
+        showAchievement.call(this, 'ВЫЖИВШИЙ!'); 
+    }
+    
+    if (gameTime - lastPowerUpSpawn >= powerUpSpawnRate / 1000) { 
+        lastPowerUpSpawn = gameTime; 
+        spawnPowerUp.call(this); 
+    }
+    
     cleanupWorld.call(this);
-    deadCows = deadCows.filter(function(dc) { dc.alpha -= 0.003; if (dc.alpha <= 0) { dc.destroy(); return false; } return true; });
-    updateBloodStains.call(this); updateBossHPBar.call(this);
-
+    deadCows = deadCows.filter(function(dc) { 
+        if (dc.alpha <= 0 || !dc.active) { 
+            if (dc.active) dc.destroy(); 
+            return false; 
+        } 
+        dc.alpha -= 0.003; 
+        return true; 
+    });
+    updateBloodStains.call(this); 
+    updateBossHPBar.call(this);
+    
     var self = this;
     goldenCows.children.iterate(function(cow) {
-        if (cow) { clampToMap(cow); var dx = cow.x - horse.x, dy = cow.y - horse.y, dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < 300 && dist > 0) { cow.x += (dx / dist) * cow.fleeSpeed; cow.y += (dy / dist) * cow.fleeSpeed; var ta = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90; var d = ta - cow.angle; while (d > 180) d -= 360; while (d < -180) d += 360; cow.angle += d * 0.15; } }
+        if (cow && cow.active) { 
+            clampToMap(cow); 
+            var dx = cow.x - horse.x, dy = cow.y - horse.y, dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 300 && dist > 0) { 
+                cow.x += (dx / dist) * cow.fleeSpeed; 
+                cow.y += (dy / dist) * cow.fleeSpeed; 
+                var ta = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90; 
+                var d = ta - cow.angle; 
+                while (d > 180) d -= 360; 
+                while (d < -180) d += 360; 
+                cow.angle += d * 0.15; 
+            } 
+        }
     });
-
-    if (dogCompanion) {
+    
+    if (dogCompanion && dogCompanion.active) {
         dogCompanion.attackTimer += 1 / 60;
         var closest = null, minD = 450;
-        enemies.children.iterate(function(e) { if (e) { var d = Phaser.Math.Distance.Between(dogCompanion.x, dogCompanion.y, e.x, e.y); if (d < minD) { minD = d; closest = e; } } });
+        enemies.children.iterate(function(e) { 
+            if (e && e.active) { 
+                var d = Phaser.Math.Distance.Between(dogCompanion.x, dogCompanion.y, e.x, e.y); 
+                if (d < minD) { minD = d; closest = e; } 
+            } 
+        });
         if (closest) {
             var dx = closest.x - dogCompanion.x, dy = closest.y - dogCompanion.y, dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist > 30) { dogCompanion.x += (dx / dist) * 5; dogCompanion.y += (dy / dist) * 5; }
-            var ta = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90; var d2 = ta - dogCompanion.angle; while (d2 > 180) d2 -= 360; while (d2 < -180) d2 += 360; dogCompanion.angle += d2 * 0.25;
+            if (dist > 30) { 
+                dogCompanion.x += (dx / dist) * 5; 
+                dogCompanion.y += (dy / dist) * 5; 
+            }
+            var ta = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90; 
+            var d2 = ta - dogCompanion.angle; 
+            while (d2 > 180) d2 -= 360; 
+            while (d2 < -180) d2 += 360; 
+            dogCompanion.angle += d2 * 0.25;
+            
             if (dist < 40 && dogCompanion.attackTimer >= 0.6) {
                 dogCompanion.attackTimer = 0;
-                if (closest.isBoss) { closest.hp -= 50; if (closest.hp <= 0) killBoss.call(self, closest); }
-                else { var ang = closest.angle; closest.destroy(); score += 10; createWolfSkeleton.call(self, closest.x, closest.y, false, ang); createBloodStain.call(self, closest.x, closest.y); }
+                if (closest.isBoss) { 
+                    closest.hp -= 50; 
+                    if (closest.hp <= 0) killBoss.call(self, closest); 
+                } else { 
+                    var ang = closest.angle; 
+                    closest.destroy(); 
+                    score += 10; 
+                    createWolfSkeleton.call(self, closest.x, closest.y, false, ang); 
+                    createBloodStain.call(self, closest.x, closest.y); 
+                }
             }
         } else {
             var a = gameTime * 3, tx = horse.x + Math.cos(a) * 450, ty = horse.y + Math.sin(a) * 450;
             var dx = tx - dogCompanion.x, dy = ty - dogCompanion.y, dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist > 5) { dogCompanion.x += (dx / dist) * 3; dogCompanion.y += (dy / dist) * 3; }
-            var ta = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90; var d2 = ta - dogCompanion.angle; while (d2 > 180) d2 -= 360; while (d2 < -180) d2 += 360; dogCompanion.angle += d2 * 0.2;
+            if (dist > 5) { 
+                dogCompanion.x += (dx / dist) * 3; 
+                dogCompanion.y += (dy / dist) * 3; 
+            }
+            var ta = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90; 
+            var d2 = ta - dogCompanion.angle; 
+            while (d2 > 180) d2 -= 360; 
+            while (d2 < -180) d2 += 360; 
+            dogCompanion.angle += d2 * 0.2;
         }
     }
-
+    
     for (var bi = bulls.length - 1; bi >= 0; bi--) {
         var bull = bulls[bi];
         if (!bull || !bull.active) { bulls.splice(bi, 1); continue; }
-        clampToMap(bull); bull.attackTimer += 1 / 60;
+        clampToMap(bull); 
+        bull.attackTimer += 1 / 60;
         if (bull.angry) {
             var tx = horse.x, ty = horse.y, md = Phaser.Math.Distance.Between(bull.x, bull.y, horse.x, horse.y), tt = 'horse';
-            enemies.children.iterate(function(e) { if (e) { var d = Phaser.Math.Distance.Between(bull.x, bull.y, e.x, e.y); if (d < md) { md = d; tx = e.x; ty = e.y; tt = e.isBoss ? 'boss' : 'wolf'; } } });
+            enemies.children.iterate(function(e) { 
+                if (e && e.active) { 
+                    var d = Phaser.Math.Distance.Between(bull.x, bull.y, e.x, e.y); 
+                    if (d < md) { md = d; tx = e.x; ty = e.y; tt = e.isBoss ? 'boss' : 'wolf'; } 
+                } 
+            });
             var dx = tx - bull.x, dy = ty - bull.y, dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist > 5) { bull.x += (dx / dist) * 2.2; bull.y += (dy / dist) * 2.2; var ta = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90; var d = ta - bull.angle; while (d > 180) d -= 360; while (d < -180) d += 360; bull.angle += d * 0.2; }
+            if (dist > 5) { 
+                bull.x += (dx / dist) * 2.2; 
+                bull.y += (dy / dist) * 2.2; 
+                var ta = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90; 
+                var d = ta - bull.angle; 
+                while (d > 180) d -= 360; 
+                while (d < -180) d += 360; 
+                bull.angle += d * 0.2; 
+            }
             if (tt === 'boss' && dist < 40 && bull.attackTimer > 0.5) {
                 bull.attackTimer = 0;
                 enemies.children.iterate(function(e) {
-                    if (e && e.isBoss && Phaser.Math.Distance.Between(bull.x, bull.y, e.x, e.y) < 40) {
-                        e.hp -= 50; killBull.call(self, bull); if (e.hp <= 0) killBoss.call(self, e);
+                    if (e && e.isBoss && e.active && Phaser.Math.Distance.Between(bull.x, bull.y, e.x, e.y) < 40) {
+                        e.hp -= 50; 
+                        killBull.call(self, bull); 
+                        if (e.hp <= 0) killBoss.call(self, e);
                     }
                 });
             } else if (tt === 'horse' && Phaser.Math.Distance.Between(bull.x, bull.y, horse.x, horse.y) < 35 && bull.attackTimer > 0.8) {
-                bull.attackTimer = 0; loseHP.call(self); if (gameState === 'playing') self.cameras.main.shake(200, 0.03);
+                bull.attackTimer = 0; 
+                loseHP.call(self); 
+                if (gameState === 'playing') self.cameras.main.shake(200, 0.03);
             } else if (tt === 'wolf') {
-                enemies.children.iterate(function(e) { if (e && !e.isBoss && Phaser.Math.Distance.Between(bull.x, bull.y, e.x, e.y) < 35) { e.destroy(); createBloodStain.call(self, e.x, e.y); createWolfSkeleton.call(self, e.x, e.y, false, 0); score += 5; } });
+                enemies.children.iterate(function(e) { 
+                    if (e && !e.isBoss && e.active && Phaser.Math.Distance.Between(bull.x, bull.y, e.x, e.y) < 35) { 
+                        e.destroy(); 
+                        createBloodStain.call(self, e.x, e.y); 
+                        createWolfSkeleton.call(self, e.x, e.y, false, 0); 
+                        score += 5; 
+                    } 
+                });
             }
         } else {
             if (!bull.wanderTarget || Phaser.Math.Distance.Between(bull.x, bull.y, bull.wanderTarget.x, bull.wanderTarget.y) < 20) {
                 var a = Math.random() * Math.PI * 2, dd = Phaser.Math.Between(100, 300);
-                bull.wanderTarget = { x: Phaser.Math.Clamp(bull.x + Math.cos(a) * dd, -MAP_LIMIT, MAP_LIMIT), y: Phaser.Math.Clamp(bull.y + Math.sin(a) * dd, -MAP_LIMIT, MAP_LIMIT) };
+                bull.wanderTarget = { 
+                    x: Phaser.Math.Clamp(bull.x + Math.cos(a) * dd, -MAP_LIMIT, MAP_LIMIT), 
+                    y: Phaser.Math.Clamp(bull.y + Math.sin(a) * dd, -MAP_LIMIT, MAP_LIMIT) 
+                };
             }
             var dx = bull.wanderTarget.x - bull.x, dy = bull.wanderTarget.y - bull.y, dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist > 5) { bull.x += (dx / dist) * 0.5; bull.y += (dy / dist) * 0.5; var ta = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90; var d = ta - bull.angle; while (d > 180) d -= 360; while (d < -180) d += 360; bull.angle += d * 0.1; }
+            if (dist > 5) { 
+                bull.x += (dx / dist) * 0.5; 
+                bull.y += (dy / dist) * 0.5; 
+                var ta = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90; 
+                var d = ta - bull.angle; 
+                while (d > 180) d -= 360; 
+                while (d < -180) d += 360; 
+                bull.angle += d * 0.1; 
+            }
         }
     }
-
+    
     cowsToCollect.children.iterate(function(cow) {
-        if (cow) { clampToMap(cow);
+        if (cow && cow.active) { 
+            clampToMap(cow);
             var bNear = false, bx = 0, by = 0;
-            enemies.children.iterate(function(e) { if (e && e.isBoss && Phaser.Math.Distance.Between(cow.x, cow.y, e.x, e.y) < 300) { bNear = true; bx = cow.x - e.x; by = cow.y - e.y; } });
+            enemies.children.iterate(function(e) { 
+                if (e && e.isBoss && e.active && Phaser.Math.Distance.Between(cow.x, cow.y, e.x, e.y) < 300) { 
+                    bNear = true; bx = cow.x - e.x; by = cow.y - e.y; 
+                } 
+            });
             var buNear = false, bux = 0, buy = 0;
-            bulls.forEach(function(bull) { if (bull && bull.angry && Phaser.Math.Distance.Between(cow.x, cow.y, bull.x, bull.y) < 250) { buNear = true; bux = cow.x - bull.x; buy = cow.y - bull.y; } });
-            if (bNear) { var dist = Math.sqrt(bx * bx + by * by); if (dist > 0) { cow.x += (bx / dist) * 1.0; cow.y += (by / dist) * 1.0; } var ta = Phaser.Math.RadToDeg(Math.atan2(by, bx)) + 90; var d = ta - cow.angle; while (d > 180) d -= 360; while (d < -180) d += 360; cow.angle += d * 0.15; }
-            else if (buNear) { var dist = Math.sqrt(bux * bux + buy * buy); if (dist > 0) { cow.x += (bux / dist) * 1.2; cow.y += (buy / dist) * 1.2; } var ta = Phaser.Math.RadToDeg(Math.atan2(buy, bux)) + 90; var d = ta - cow.angle; while (d > 180) d -= 360; while (d < -180) d += 360; cow.angle += d * 0.15; }
-            else { var dx = horse.x - cow.x, dy = horse.y - cow.y, dist = Math.sqrt(dx * dx + dy * dy); if (dist > 5 && dist < 800) { cow.x += (dx / dist) * 1.0; cow.y += (dy / dist) * 1.0; } var ta = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90; var d = ta - cow.angle; while (d > 180) d -= 360; while (d < -180) d += 360; cow.angle += d * 0.1; }
+            bulls.forEach(function(bull) { 
+                if (bull && bull.active && bull.angry && Phaser.Math.Distance.Between(cow.x, cow.y, bull.x, bull.y) < 250) { 
+                    buNear = true; bux = cow.x - bull.x; buy = cow.y - bull.y; 
+                } 
+            });
+            if (bNear) { 
+                var dist = Math.sqrt(bx * bx + by * by); 
+                if (dist > 0) { cow.x += (bx / dist) * 1.0; cow.y += (by / dist) * 1.0; } 
+                var ta = Phaser.Math.RadToDeg(Math.atan2(by, bx)) + 90; 
+                var d = ta - cow.angle; 
+                while (d > 180) d -= 360; 
+                while (d < -180) d += 360; 
+                cow.angle += d * 0.15; 
+            } else if (buNear) { 
+                var dist = Math.sqrt(bux * bux + buy * buy); 
+                if (dist > 0) { cow.x += (bux / dist) * 1.2; cow.y += (buy / dist) * 1.2; } 
+                var ta = Phaser.Math.RadToDeg(Math.atan2(buy, bux)) + 90; 
+                var d = ta - cow.angle; 
+                while (d > 180) d -= 360; 
+                while (d < -180) d += 360; 
+                cow.angle += d * 0.15; 
+            } else { 
+                var dx = horse.x - cow.x, dy = horse.y - cow.y, dist = Math.sqrt(dx * dx + dy * dy); 
+                if (dist > 5 && dist < 800) { cow.x += (dx / dist) * 1.0; cow.y += (dy / dist) * 1.0; } 
+                var ta = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90; 
+                var d = ta - cow.angle; 
+                while (d > 180) d -= 360; 
+                while (d < -180) d += 360; 
+                cow.angle += d * 0.1; 
+            }
         }
     });
-
+    
     for (var ci = 0; ci < cows.length; ci++) {
-        var cow = cows[ci], target = ci === 0 ? horse : cows[ci - 1], td = ci === 0 ? 50 : 40;
+        var cow = cows[ci];
+        if (!cow || !cow.active) continue;
+        var target = ci === 0 ? horse : cows[ci - 1];
+        var td = ci === 0 ? 50 : 40;
         var dx = target.x - cow.x, dy = target.y - cow.y, dist = Math.sqrt(dx * dx + dy * dy);
         if (dist > td) { cow.x += (dx / dist) * 4; cow.y += (dy / dist) * 4; }
         clampToMap(cow);
-        var ta = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90, d = ta - cow.angle; while (d > 180) d -= 360; while (d < -180) d += 360; cow.angle += d * 0.1;
+        var ta = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90, d = ta - cow.angle; 
+        while (d > 180) d -= 360; 
+        while (d < -180) d += 360; 
+        cow.angle += d * 0.1;
     }
-
+    
     if (enemies.getChildren().length > MAX_ENEMIES) {
-        var ch = enemies.getChildren(); for (var ei = 0; ei < ch.length && enemies.getChildren().length > MAX_ENEMIES; ei++) { if (ch[ei] && !ch[ei].isBoss) ch[ei].destroy(); }
+        var ch = enemies.getChildren(); 
+        for (var ei = 0; ei < ch.length && enemies.getChildren().length > MAX_ENEMIES; ei++) { 
+            if (ch[ei] && !ch[ei].isBoss && ch[ei].active) ch[ei].destroy(); 
+        }
     }
-
+    
     enemies.children.iterate(function(enemy) {
-        if (enemy) { clampToMap(enemy);
+        if (enemy && enemy.active) { 
+            clampToMap(enemy);
             var tx, ty;
             if (enemy.isBoss) { tx = horse.x; ty = horse.y; }
-            else { tx = horse.x; ty = horse.y; var md = Phaser.Math.Distance.Between(horse.x, horse.y, enemy.x, enemy.y);
-                for (var ci = 0; ci < cows.length; ci++) { var d = Phaser.Math.Distance.Between(cows[ci].x, cows[ci].y, enemy.x, enemy.y); if (d < md) { md = d; tx = cows[ci].x; ty = cows[ci].y; } }
-                cowsToCollect.children.iterate(function(c) { if (c) { var d = Phaser.Math.Distance.Between(c.x, c.y, enemy.x, enemy.y); if (d < md) { md = d; tx = c.x; ty = c.y; } } }); }
+            else { 
+                tx = horse.x; ty = horse.y; 
+                var md = Phaser.Math.Distance.Between(horse.x, horse.y, enemy.x, enemy.y);
+                for (var ci = 0; ci < cows.length; ci++) { 
+                    if (cows[ci] && cows[ci].active) {
+                        var d = Phaser.Math.Distance.Between(cows[ci].x, cows[ci].y, enemy.x, enemy.y); 
+                        if (d < md) { md = d; tx = cows[ci].x; ty = cows[ci].y; } 
+                    }
+                }
+                cowsToCollect.children.iterate(function(c) { 
+                    if (c && c.active) { 
+                        var d = Phaser.Math.Distance.Between(c.x, c.y, enemy.x, enemy.y); 
+                        if (d < md) { md = d; tx = c.x; ty = c.y; } 
+                    } 
+                }); 
+            }
             var dx = tx - enemy.x, dy = ty - enemy.y, dist = Math.sqrt(dx * dx + dy * dy), speed = enemy.isBoss ? 2.8 : 1.8;
             if (enemy.isBoss) {
-                if (dist > 1200) { var ta = Math.atan2(dy, dx); enemy.x = horse.x + Math.cos(ta) * 800; enemy.y = horse.y + Math.sin(ta) * 800; }
-                else if (dist > 5) { enemy.x += (dx / dist) * speed; enemy.y += (dy / dist) * speed; }
+                if (dist > 1200) { 
+                    var ta = Math.atan2(dy, dx); 
+                    enemy.x = horse.x + Math.cos(ta) * 800; 
+                    enemy.y = horse.y + Math.sin(ta) * 800; 
+                } else if (dist > 5) { 
+                    enemy.x += (dx / dist) * speed; 
+                    enemy.y += (dy / dist) * speed; 
+                }
                 for (var ci = 0; ci < cows.length; ci++) {
-                    if (Phaser.Math.Distance.Between(enemy.x, enemy.y, cows[ci].x, cows[ci].y) < 40) {
-                        var ec = cows[ci]; cows.splice(ci, 1); ec.destroy(); enemy.hp = Math.min(enemy.hp + 25, 200); return;
+                    if (cows[ci] && cows[ci].active && Phaser.Math.Distance.Between(enemy.x, enemy.y, cows[ci].x, cows[ci].y) < 40) {
+                        var ec = cows[ci]; 
+                        cows.splice(ci, 1); 
+                        ec.destroy(); 
+                        enemy.hp = Math.min(enemy.hp + 25, 200); 
+                        return;
                     }
                 }
                 var ate = false;
-                cowsToCollect.children.iterate(function(c) { if (c && !ate && Phaser.Math.Distance.Between(enemy.x, enemy.y, c.x, c.y) < 40) { c.destroy(); enemy.hp = Math.min(enemy.hp + 25, 200); ate = true; } });
+                cowsToCollect.children.iterate(function(c) { 
+                    if (c && c.active && !ate && Phaser.Math.Distance.Between(enemy.x, enemy.y, c.x, c.y) < 40) { 
+                        c.destroy(); 
+                        enemy.hp = Math.min(enemy.hp + 25, 200); 
+                        ate = true; 
+                    } 
+                });
                 if (ate) return;
             } else {
-                if (dist > 5 && dist < 800) { enemy.x += (dx / dist) * speed; enemy.y += (dy / dist) * speed; }
-                for (var ci = 0; ci < cows.length; ci++) { if (Phaser.Math.Distance.Between(enemy.x, enemy.y, cows[ci].x, cows[ci].y) < 15) { killCowByWolf.call(self, cows[ci], enemy); return; } }
+                if (dist > 5 && dist < 800) { 
+                    enemy.x += (dx / dist) * speed; 
+                    enemy.y += (dy / dist) * speed; 
+                }
+                for (var ci = 0; ci < cows.length; ci++) { 
+                    if (cows[ci] && cows[ci].active && Phaser.Math.Distance.Between(enemy.x, enemy.y, cows[ci].x, cows[ci].y) < 15) { 
+                        killCowByWolf.call(self, cows[ci], enemy); 
+                        return; 
+                    } 
+                }
                 var atk = false;
-                cowsToCollect.children.iterate(function(c) { if (c && !atk && Phaser.Math.Distance.Between(enemy.x, enemy.y, c.x, c.y) < 15) { deadCows.push(createDeadCow.call(self, c.x, c.y, c.angle)); c.destroy(); enemy.destroy(); atk = true; } });
+                cowsToCollect.children.iterate(function(c) { 
+                    if (c && c.active && !atk && Phaser.Math.Distance.Between(enemy.x, enemy.y, c.x, c.y) < 15) { 
+                        deadCows.push(createDeadCow.call(self, c.x, c.y, c.angle)); 
+                        c.destroy(); 
+                        enemy.destroy(); 
+                        atk = true; 
+                    } 
+                });
             }
-            var ta2 = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90, d = ta2 - enemy.angle; while (d > 180) d -= 360; while (d < -180) d += 360; enemy.angle += d * 0.15;
+            var ta2 = Phaser.Math.RadToDeg(Math.atan2(dy, dx)) + 90, d = ta2 - enemy.angle; 
+            while (d > 180) d -= 360; 
+            while (d < -180) d += 360; 
+            enemy.angle += d * 0.15;
         }
     });
-
-    if (activePowerUp) { powerUpTimer -= 1 / 60; if (powerUpTimer <= 0) deactivatePowerUp.call(this); else powerUpText.setText(activePowerUp.name + ': ' + Math.ceil(powerUpTimer) + 'с'); }
+    
+    if (activePowerUp) { 
+        powerUpTimer -= 1 / 60; 
+        if (powerUpTimer <= 0) deactivatePowerUp.call(this); 
+        else powerUpText.setText(activePowerUp.name + ': ' + Math.ceil(powerUpTimer) + 'с'); 
+    }
+    
     var fireRate = baseFireRate;
     if (activeSkills.rapidFire) fireRate /= 2;
-    if (activePowerUp) { if (activePowerUp.type === 'machinegun') fireRate = 75; else if (activePowerUp.type === 'minigun') fireRate = 17; }
-    if (this.time.now > nextFireTime) { shoot.call(this); nextFireTime = this.time.now + fireRate; }
+    if (activePowerUp) { 
+        if (activePowerUp.type === 'machinegun') fireRate = 75; 
+        else if (activePowerUp.type === 'minigun') fireRate = 17; 
+    }
+    
+    if (this.time.now > nextFireTime) { 
+        shoot.call(this); 
+        nextFireTime = this.time.now + fireRate; 
+    }
+    
     bullets.children.iterate(function(b) {
-        if (!b) return;
-        if (Phaser.Math.Distance.Between(b.x, b.y, horse.x, horse.y) > 1000) { b.destroy(); return; }
-        for (var i = 0; i < bulls.length; i++) { if (bulls[i] && bulls[i].active && Phaser.Math.Distance.Between(b.x, b.y, bulls[i].x, bulls[i].y) < 25) { b.destroy(); hitBull.call(self, bulls[i]); return; } }
+        if (!b || !b.active) return;
+        if (Phaser.Math.Distance.Between(b.x, b.y, horse.x, horse.y) > 1000) { 
+            b.destroy(); 
+            return; 
+        }
+        for (var i = 0; i < bulls.length; i++) { 
+            if (bulls[i] && bulls[i].active && Phaser.Math.Distance.Between(b.x, b.y, bulls[i].x, bulls[i].y) < 25) { 
+                b.destroy(); 
+                hitBull.call(self, bulls[i]); 
+                return; 
+            } 
+        }
     });
+    
     this.cowCountText.setText('Коровы: ' + cows.length);
     this.scoreText.setText('Счёт: ' + score);
     updateSkillButtons.call(this);
@@ -936,13 +1275,35 @@ function update() {
 
 function cleanupWorld() {
     var cx = horse.x, cy = horse.y;
-    bgDecorations.children.iterate(function(d) { if (d && Phaser.Math.Distance.Between(d.x, d.y, cx, cy) > 1200) d.destroy(); });
-    wolfSkeletons.children.iterate(function(s) { if (s && Phaser.Math.Distance.Between(s.x, s.y, cx, cy) > 1200) s.destroy(); });
-    cowsToCollect.children.iterate(function(c) { if (c && Phaser.Math.Distance.Between(c.x, c.y, cx, cy) > 1200) c.destroy(); });
-    goldenCows.children.iterate(function(c) { if (c && Phaser.Math.Distance.Between(c.x, c.y, cx, cy) > 1200) c.destroy(); });
-    powerUps.children.iterate(function(p) { if (p && Phaser.Math.Distance.Between(p.x, p.y, cx, cy) > 1200) p.destroy(); });
-    deadCows = deadCows.filter(function(dc) { if (Phaser.Math.Distance.Between(dc.x, dc.y, cx, cy) > 1200) { dc.destroy(); return false; } return true; });
-    eatingWolves = eatingWolves.filter(function(w) { if (Phaser.Math.Distance.Between(w.x, w.y, cx, cy) > 1200) { w.destroy(); return false; } return true; });
+    bgDecorations.children.iterate(function(d) { 
+        if (d && d.active && Phaser.Math.Distance.Between(d.x, d.y, cx, cy) > 1200) d.destroy(); 
+    });
+    wolfSkeletons.children.iterate(function(s) { 
+        if (s && s.active && Phaser.Math.Distance.Between(s.x, s.y, cx, cy) > 1200) s.destroy(); 
+    });
+    cowsToCollect.children.iterate(function(c) { 
+        if (c && c.active && Phaser.Math.Distance.Between(c.x, c.y, cx, cy) > 1200) c.destroy(); 
+    });
+    goldenCows.children.iterate(function(c) { 
+        if (c && c.active && Phaser.Math.Distance.Between(c.x, c.y, cx, cy) > 1200) c.destroy(); 
+    });
+    powerUps.children.iterate(function(p) { 
+        if (p && p.active && Phaser.Math.Distance.Between(p.x, p.y, cx, cy) > 1200) p.destroy(); 
+    });
+    deadCows = deadCows.filter(function(dc) { 
+        if (Phaser.Math.Distance.Between(dc.x, dc.y, cx, cy) > 1200) { 
+            if (dc.active) dc.destroy(); 
+            return false; 
+        } 
+        return true; 
+    });
+    eatingWolves = eatingWolves.filter(function(w) { 
+        if (Phaser.Math.Distance.Between(w.x, w.y, cx, cy) > 1200) { 
+            if (w.active) w.destroy(); 
+            return false; 
+        } 
+        return true; 
+    });
 }
 
 function spawnEnemy() {
@@ -957,7 +1318,11 @@ function spawnEnemy() {
     ]));
 }
 
-function spawnCow() { if (gameState !== 'playing') return; var pos = randomMapPos(300, 500); cowsToCollect.add(createCow.call(this, pos.x, pos.y)); }
+function spawnCow() { 
+    if (gameState !== 'playing') return; 
+    var pos = randomMapPos(300, 500); 
+    cowsToCollect.add(createCow.call(this, pos.x, pos.y)); 
+}
 
 function createCow(x, y) {
     return this.add.container(x, y, [
@@ -976,14 +1341,33 @@ function spawnPowerUp() {
     var box = this.add.rectangle(0, 0, 44, 44, 0x8B4513); box.setStrokeStyle(4, 0x654321);
     var lid = this.add.rectangle(0, -22, 48, 8, 0xA0522D);
     var q = this.add.text(0, 2, '?', { fontSize: '32px', fill: '#FFD700', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5);
-    var pu = this.add.container(pos.x, pos.y, [box, lid, q]); pu.type = type; pu.name = names[type];
+    var pu = this.add.container(pos.x, pos.y, [box, lid, q]); 
+    pu.type = type; 
+    pu.name = names[type];
     powerUps.add(pu);
     this.tweens.add({ targets: pu, scale: 1.1, duration: 600, yoyo: true, repeat: -1 });
 }
 
-function collectPowerUp(h, pu) { pu.destroy(); activatePowerUp.call(this, pu.type, pu.name); }
-function activatePowerUp(type, name) { if (activePowerUp) deactivatePowerUp.call(this); activePowerUp = { type: type, name: name }; powerUpTimer = 20; updateCowboyWeapon.call(this); }
-function deactivatePowerUp() { activePowerUp = null; powerUpTimer = 0; powerUpText.setText(''); updateCowboyWeapon.call(this); }
+function collectPowerUp(h, pu) { 
+    if (pu && pu.active) {
+        pu.destroy(); 
+        activatePowerUp.call(this, pu.type, pu.name); 
+    }
+}
+
+function activatePowerUp(type, name) { 
+    if (activePowerUp) deactivatePowerUp.call(this); 
+    activePowerUp = { type: type, name: name }; 
+    powerUpTimer = 20; 
+    updateCowboyWeapon.call(this); 
+}
+
+function deactivatePowerUp() { 
+    activePowerUp = null; 
+    powerUpTimer = 0; 
+    powerUpText.setText(''); 
+    updateCowboyWeapon.call(this); 
+}
 
 function spawnBoss() {
     if (gameState !== 'playing' || bossActive) return;
@@ -991,7 +1375,7 @@ function spawnBoss() {
     if (gameState === 'playing') this.cameras.main.shake(500, 0.04);
     createBossDarkness.call(this);
     var bt = this.add.text(600, 400, 'БОСС-ВОЛК!', { fontSize: '72px', fill: '#ff0000', fontStyle: 'bold', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setScrollFactor(0);
-    this.tweens.add({ targets: bt, alpha: 0, scale: 2, duration: 3000, onComplete: function() { bt.destroy(); } });
+    this.tweens.add({ targets: bt, alpha: 0, scale: 2, duration: 3000, onComplete: function() { if (bt.active) bt.destroy(); } });
     var pos = randomMapPos(350, 450);
     var boss = this.add.container(pos.x, pos.y, [
         this.add.ellipse(0, 0, 42, 60, 0x440000), this.add.ellipse(0, -36, 30, 36, 0x550000),
@@ -1000,8 +1384,12 @@ function spawnBoss() {
         this.add.rectangle(0, 36, 12, 24, 0x330000), this.add.rectangle(-12, 18, 6, 18, 0x330000), this.add.rectangle(12, 18, 6, 18, 0x330000),
         this.add.rectangle(-12, 28, 6, 18, 0x330000), this.add.rectangle(12, 28, 6, 18, 0x330000)
     ]);
-    boss.isBoss = true; boss.hp = 200; enemies.add(boss);
-    var aura = this.add.circle(0, 0, 60, 0xff0000, 0.2); aura.setStrokeStyle(3, 0xff0000, 0.6); boss.add(aura);
+    boss.isBoss = true; 
+    boss.hp = 200; 
+    enemies.add(boss);
+    var aura = this.add.circle(0, 0, 60, 0xff0000, 0.2); 
+    aura.setStrokeStyle(3, 0xff0000, 0.6); 
+    boss.add(aura);
     this.tweens.add({ targets: aura, scale: 1.3, alpha: 0.1, duration: 800, yoyo: true, repeat: -1 });
 }
 
@@ -1013,52 +1401,71 @@ function shoot() {
     var wt = activePowerUp ? activePowerUp.type : 'pistol';
     var colors = { pistol: 0x222222, shotgun: 0xFF0000, machinegun: 0x0000FF, minigun: 0x8B4513, multishot: 0xFF8800 };
     var c = colors[wt] || 0x222222;
-    if (wt === 'shotgun') { for (var i = -2; i <= 2; i++) mkBullet.call(this, bx, by, angle + i * 0.15, bs, c); }
-    else if (wt === 'machinegun') { mkBullet.call(this, bx, by, angle, bs, c); }
-    else if (wt === 'minigun') { mkBullet.call(this, bx, by, angle + (Math.random() - 0.5) * 0.6, bs, c); }
-    else if (wt === 'multishot') { for (var i = 0; i < 8; i++) mkBullet.call(this, bx, by, (Math.PI * 2 / 8) * i, bs, c); }
-    else { mkBullet.call(this, bx, by, angle, bs, c); }
     
+    if (activeSkills.dualWield) {
+        var spread = 10 * (Math.PI / 180);
+        var offset = 15;
+        
+        var perpX = Math.cos(angle + Math.PI/2) * offset;
+        var perpY = Math.sin(angle + Math.PI/2) * offset;
+        
+        var bx1 = bx + perpX, by1 = by + perpY;
+        var bx2 = bx - perpX, by2 = by - perpY;
+
+        if (wt === 'shotgun') {
+            for (var i = -2; i <= 2; i++) {
+                mkBullet.call(this, bx1, by1, angle - spread + i * 0.15, bs, c);
+                mkBullet.call(this, bx2, by2, angle + spread + i * 0.15, bs, c);
+            }
+        } else if (wt === 'machinegun' || wt === 'minigun') {
+            mkBullet.call(this, bx1, by1, angle - spread + (Math.random() - 0.5) * 0.4, bs, c);
+            mkBullet.call(this, bx2, by2, angle + spread + (Math.random() - 0.5) * 0.4, bs, c);
+        } else if (wt === 'multishot') {
+            for (var i = 0; i < 8; i++) {
+                mkBullet.call(this, bx1, by1, angle - spread + (Math.PI * 2 / 8) * i, bs, c);
+                mkBullet.call(this, bx2, by2, angle + spread + (Math.PI * 2 / 8) * i, bs, c);
+            }
+        } else {
+            mkBullet.call(this, bx1, by1, angle - spread, bs, c);
+            mkBullet.call(this, bx2, by2, angle + spread, bs, c);
+        }
+    } else {
+        if (wt === 'shotgun') { for (var i = -2; i <= 2; i++) mkBullet.call(this, bx, by, angle + i * 0.15, bs, c); }
+        else if (wt === 'machinegun') { mkBullet.call(this, bx, by, angle, bs, c); }
+        else if (wt === 'minigun') { mkBullet.call(this, bx, by, angle + (Math.random() - 0.5) * 0.6, bs, c); }
+        else if (wt === 'multishot') { for (var i = 0; i < 8; i++) mkBullet.call(this, bx, by, (Math.PI * 2 / 8) * i, bs, c); }
+        else { mkBullet.call(this, bx, by, angle, bs, c); }
+    }
     var mf = this.add.circle(bx, by, 4, 0xFFDD00, 0.7);
-    this.tweens.add({ targets: mf, alpha: 0, scale: 1.2, duration: 80, onComplete: function() { mf.destroy(); } });
+    this.tweens.add({ targets: mf, alpha: 0, scale: 1.2, duration: 80, onComplete: function() { if (mf.active) mf.destroy(); } });
 }
 
 function mkBullet(x, y, a, s, color) {
-    var b = this.add.circle(x, y, 4, color); this.physics.add.existing(b); bullets.add(b);
+    var b = this.add.circle(x, y, 4, color); 
+    this.physics.add.existing(b); 
+    bullets.add(b);
     b.body.setVelocity(Math.cos(a) * s, Math.sin(a) * s);
 }
 
 function hitBulletEnemy(b, e) {
+    if (!e || !e.active) return;
     var impactX = b.x, impactY = b.y;
     b.destroy();
-    
     var flash = this.add.circle(impactX, impactY, 8, 0xFFFFFF, 0.7);
-    this.tweens.add({ targets: flash, alpha: 0, scale: 1.5, duration: 200, onComplete: function() { flash.destroy(); } });
-    
+    this.tweens.add({ targets: flash, alpha: 0, scale: 1.5, duration: 200, onComplete: function() { if (flash.active) flash.destroy(); } });
     for (var i = 0; i < 4; i++) {
         var angle = (Math.PI * 2 / 4) * i;
         var dist = Phaser.Math.Between(5, 12);
-        var particle = this.add.circle(
-            impactX + Math.cos(angle) * dist,
-            impactY + Math.sin(angle) * dist,
-            Phaser.Math.Between(1, 3),
-            0xFFAA00,
-            0.8
-        );
-        this.tweens.add({
-            targets: particle,
-            alpha: 0,
-            scale: 0.3,
-            duration: 250,
-            onComplete: function() { particle.destroy(); }
-        });
+        var particle = this.add.circle(impactX + Math.cos(angle) * dist, impactY + Math.sin(angle) * dist, Phaser.Math.Between(1, 3), 0xFFAA00, 0.8);
+        this.tweens.add({ targets: particle, alpha: 0, scale: 0.3, duration: 250, onComplete: function() { if (particle.active) particle.destroy(); } });
     }
-    
     if (e.isBoss) {
         e.hp--;
         if (e.hp <= 0) killBoss.call(this, e);
     } else {
-        e.destroy(); score += 10; wolvesKilled++;
+        e.destroy(); 
+        score += 10; 
+        wolvesKilled++;
         createWolfSkeleton.call(this, e.x, e.y, false, e.angle);
         createBloodStain.call(this, e.x, e.y);
         if (wolvesKilled >= 10 && !achievements.firstBlood) { achievements.firstBlood = true; showAchievement.call(this, 'ПЕРВАЯ КРОВЬ!'); }
@@ -1068,38 +1475,72 @@ function hitBulletEnemy(b, e) {
 }
 
 function hitEnemy(h, e) {
-    if (e.isBoss) { loseHP.call(this); if (gameState === 'playing') this.cameras.main.shake(200, 0.02); return; }
-    e.destroy(); if (gameState === 'playing') this.cameras.main.shake(200, 0.02);
-    if (cows.length > 0) { cows.pop().destroy(); } else loseHP.call(this);
+    if (!e || !e.active) return;
+    if (e.isBoss) { 
+        loseHP.call(this); 
+        if (gameState === 'playing') this.cameras.main.shake(200, 0.02); 
+        return; 
+    }
+    e.destroy(); 
+    if (gameState === 'playing') this.cameras.main.shake(200, 0.02);
+    if (cows.length > 0) { 
+        cows.pop().destroy(); 
+    } else {
+        loseHP.call(this);
+    }
 }
 
 function loseHP() {
-    horseHP--; updateHPDisplay.call(this);
+    horseHP--; 
+    updateHPDisplay.call(this);
     if (horseHP <= 0) gameOver.call(this);
 }
 
-function updateHPDisplay() { var h = ''; for (var i = 0; i < horseHP; i++) h += '❤️'; this.hpText.setText(h); }
+function updateHPDisplay() { 
+    var h = ''; 
+    for (var i = 0; i < horseHP; i++) h += '❤️'; 
+    this.hpText.setText(h); 
+}
 
 function collectCow(h, cow) {
-    cow.destroy(); cows.push(createCow.call(this, horse.x, horse.y + 50));
-    score += 5; totalCowsCollected++; totalCowsEverSaved++;
+    if (!cow || !cow.active) return;
+    cow.destroy(); 
+    cows.push(createCow.call(this, horse.x, horse.y + 50));
+    score += 5; 
+    totalCowsCollected++; 
+    totalCowsEverSaved++;
     localStorage.setItem('totalCowsEverSaved', totalCowsEverSaved);
-    if (totalCowsCollected >= 20 && !achievements.shepherd) { achievements.shepherd = true; showAchievement.call(this, 'ПАСТУХ!'); }
+    if (totalCowsCollected >= 20 && !achievements.shepherd) { 
+        achievements.shepherd = true; 
+        showAchievement.call(this, 'ПАСТУХ!'); 
+    }
 }
 
 function killCowByWolf(cow, wolf) {
+    if (!cow || !cow.active) return;
     cows = cows.filter(function(c) { return c !== cow; });
     deadCows.push(createDeadCow.call(this, cow.x, cow.y, cow.angle));
-    eatingWolves.push(wolf); cow.destroy();
+    if (wolf && wolf.active) eatingWolves.push(wolf); 
+    cow.destroy();
 }
 
 function createDeadCow(x, y, angle) {
-    var sk = this.add.graphics(); sk.lineStyle(2, 0xDDDDDD, 0.8);
-    sk.strokeCircle(0, -15, 6); sk.lineBetween(-4, -20, -8, -28); sk.lineBetween(4, -20, 8, -28);
-    sk.strokeCircle(-2, -16, 1.5); sk.strokeCircle(2, -16, 1.5); sk.lineBetween(0, -9, 0, 10);
+    var sk = this.add.graphics(); 
+    sk.lineStyle(2, 0xDDDDDD, 0.8);
+    sk.strokeCircle(0, -15, 6); 
+    sk.lineBetween(-4, -20, -8, -28); 
+    sk.lineBetween(4, -20, 8, -28);
+    sk.strokeCircle(-2, -16, 1.5); 
+    sk.strokeCircle(2, -16, 1.5); 
+    sk.lineBetween(0, -9, 0, 10);
     for (var i = 0; i < 3; i++) sk.strokeEllipse(-5, -4 + i * 4, 10, 3);
-    sk.strokeEllipse(0, 13, 8, 5); sk.lineBetween(-4, 16, -5, 28); sk.lineBetween(4, 16, 5, 28);
-    var c = this.add.container(x, y, [sk]); c.angle = angle || 0; c.alpha = 0.6; return c;
+    sk.strokeEllipse(0, 13, 8, 5); 
+    sk.lineBetween(-4, 16, -5, 28); 
+    sk.lineBetween(4, 16, 5, 28);
+    var c = this.add.container(x, y, [sk]); 
+    c.angle = angle || 0; 
+    c.alpha = 0.6; 
+    return c;
 }
 
 function shareToSocial(network) {
@@ -1114,11 +1555,13 @@ function gameOver() {
     if (gameOverTriggered) return;
     gameOverTriggered = true;
     gameState = 'gameover';
-    
-    if (score > highScore) { highScore = score; localStorage.setItem('cowboyHighScore', highScore); }
+    if (score > highScore) { 
+        highScore = score; 
+        localStorage.setItem('cowboyHighScore', highScore); 
+    }
     removeBossDarkness.call(this);
-    
-    var goUI = this.add.container(600, 400); goUI.setScrollFactor(0);
+    var goUI = this.add.container(600, 400); 
+    goUI.setScrollFactor(0);
     goUI.add(this.add.rectangle(0, 0, 900, 750, 0x000000, 0.95).setStrokeStyle(4, 0xFF0000));
     goUI.add(this.add.text(0, -320, 'КОНЕЦ ИГРЫ', { fontSize: '56px', fill: '#ff0000', fontStyle: 'bold', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5));
     goUI.add(this.add.text(0, -260, 'Счёт: ' + score, { fontSize: '32px', fill: '#ffffff' }).setOrigin(0.5));
@@ -1126,11 +1569,16 @@ function gameOver() {
     goUI.add(this.add.text(0, -185, 'Коровы: ' + totalCowsCollected + ' | Золотые: ' + goldenCowsCollected, { fontSize: '22px', fill: '#aaffaa' }).setOrigin(0.5));
     goUI.add(this.add.text(0, -155, 'Волков: ' + wolvesKilled + ' | Быков: ' + bullsKilled, { fontSize: '20px', fill: '#ffaaaa' }).setOrigin(0.5));
     goUI.add(this.add.text(0, -115, 'ДОСТИЖЕНИЯ', { fontSize: '26px', fill: '#FFD700', fontStyle: 'bold' }).setOrigin(0.5));
+    
     var al = [
-        { n: 'Первая кровь (10 волков)', u: achievements.firstBlood }, { n: 'Пастух (20 коров)', u: achievements.shepherd },
-        { n: 'GOD OF WAR (босс)', u: achievements.godOfWar }, { n: 'Выживший (10 мин)', u: achievements.survivor },
-        { n: 'Золотая лихорадка', u: achievements.goldenFever }, { n: 'Охотник (100 волков)', u: achievements.hunter },
-        { n: 'Легенда (1000 волков)', u: achievements.legend }, { n: 'Тореадор (3 быка)', u: achievements.bullfighter }
+        { n: 'Первая кровь (10 волков)', u: achievements.firstBlood }, 
+        { n: 'Пастух (20 коров)', u: achievements.shepherd },
+        { n: 'GOD OF WAR (босс)', u: achievements.godOfWar }, 
+        { n: 'Выживший (10 мин)', u: achievements.survivor },
+        { n: 'Золотая лихорадка', u: achievements.goldenFever }, 
+        { n: 'Охотник (100 волков)', u: achievements.hunter },
+        { n: 'Легенда (1000 волков)', u: achievements.legend }, 
+        { n: 'Тореадор (3 быка)', u: achievements.bullfighter }
     ];
     var yp = -80;
     for (var i = 0; i < al.length; i++) {
